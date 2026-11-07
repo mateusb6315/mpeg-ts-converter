@@ -1,6 +1,6 @@
-# Projeto Broadcast
+# MPEG-TS Converter
 
-O Projeto Broadcast é um conversor desktop para Windows que prepara vídeos MPEG-TS entrelaçados para exibição progressiva. A interface em português recebe um arquivo `.ts` por vez e usa o **NVIDIA NVEncC** para gerar um `.mkv` com vídeo HEVC Main10 e desentrelaçamento BWDIF em modo bob. O perfil foi pensado para material 60i com campo superior primeiro (TFF), produzindo aproximadamente 59,94 quadros por segundo para esse tipo de entrada.
+O MPEG-TS Converter é um aplicativo desktop para Windows que prepara vídeos MPEG-TS entrelaçados para exibição progressiva. A interface em português recebe um arquivo `.ts` por vez e usa o **NVIDIA NVEncC** para gerar um `.mkv` com vídeo HEVC Main10 e desentrelaçamento BWDIF em modo bob. O perfil foi pensado para material 60i com campo superior primeiro (TFF), produzindo aproximadamente 59,94 quadros por segundo para esse tipo de entrada.
 
 A aplicação mostra informações do arquivo, progresso e tempo estimado, enquanto a codificação acontece em segundo plano. Sua arquitetura separa interface, regras de negócio e acesso às ferramentas externas.
 
@@ -121,6 +121,4 @@ Os testes automatizados e a auditoria de arquitetura ajudam a verificar o códig
 
 ## Licença MIT
 
-O projeto é disponibilizado sob a licença MIT, que permite usar, copiar, modificar e distribuir o software, inclusive para fins comerciais, desde que o aviso de direitos autorais e a licença sejam mantidos nas cópias ou partes substanciais. O software é fornecido sem garantias. As ferramentas e dependências de terceiros possuem suas próprias licenças.
-
-Este repositório ainda não contém um arquivo `LICENSE` com o texto integral da licença e a identificação do titular dos direitos autorais.
+O MPEG-TS Converter está distribuído sob os termos da licença MIT, conforme o texto integral e o aviso de direitos autorais no arquivo [`LICENSE`](LICENSE). A licença permite usar, copiar, modificar, mesclar, publicar, distribuir, sublicenciar e vender cópias do software, desde que o aviso de copyright e o texto da licença acompanhem as cópias ou partes substanciais do software. O software é fornecido “como está”, sem garantias. As dependências e ferramentas de terceiros podem ter licenças próprias.
