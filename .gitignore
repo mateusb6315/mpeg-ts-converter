@@ -1,0 +1,13 @@
+*.bak
+__pycache__/
+.pytest_cache/
+*.py[cod]
+
+# Logs e arquivos temporários locais
+projeto_broadcast.log
+*.compilacao.lock
+prototypes/.compilacao-*/
+
+# Distribuições geradas e arquivos compactados de build
+prototypes/beta */
+prototypes/*.7z
