@@ -1,14 +1,30 @@
-*.bak
+# Python: bytecode, caches e pacotes locais
 __pycache__/
-.pytest_cache/
 *.py[cod]
+*.egg-info/
+*.bak
 .venv/
+venv/
+.env/
 
-# Logs e arquivos temporários locais
-projeto_broadcast.log
+# Testes e cobertura
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Editores e sistema operacional
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Arquivos locais de execução e compilação
+*.log
 *.compilacao.lock
-prototypes/.compilacao-*/
+build/
+dist/
 
-# Distribuições geradas e arquivos compactados de build
-prototypes/beta */
-prototypes/*.7z
+# Protótipos, builds e pacotes de distribuição gerados
+prototypes/

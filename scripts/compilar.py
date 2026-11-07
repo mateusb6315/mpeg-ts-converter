@@ -13,7 +13,7 @@ from datetime import datetime
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent.parent
-NOME = "Projeto Broadcast"
+NOME = "p_broadcast"
 PADRAO_VERSAO = re.compile(r"beta 0\.([1-9][0-9]*)", re.IGNORECASE)
 
 

@@ -1,124 +1,136 @@
 # MPEG-TS Converter
 
-O MPEG-TS Converter é um aplicativo desktop para Windows que prepara vídeos MPEG-TS entrelaçados para exibição progressiva. A interface em português recebe um arquivo `.ts` por vez e usa o **NVIDIA NVEncC** para gerar um `.mkv` com vídeo HEVC Main10 e desentrelaçamento BWDIF em modo bob. O perfil foi pensado para material 60i com campo superior primeiro (TFF), produzindo aproximadamente 59,94 quadros por segundo para esse tipo de entrada.
+Aplicativo desktop para Windows que converte **um vídeo MPEG-TS (`.ts`) por vez** em um arquivo Matroska (`.mkv`). Ele foi criado para material **60i com campo superior primeiro (TFF)**: o NVEncC aplica desentrelaçamento BWDIF em modo bob e codifica o vídeo em HEVC Main10 (10 bits). Para essa entrada, cada campo dá origem a um quadro progressivo, com resultado próximo de **59,94 quadros por segundo**. O áudio é copiado quando há faixas disponíveis.
 
-A aplicação mostra informações do arquivo, progresso e tempo estimado, enquanto a codificação acontece em segundo plano. Sua arquitetura separa interface, regras de negócio e acesso às ferramentas externas.
+A interface, em português, permite escolher ou arrastar o arquivo, acompanha o andamento e informa a conclusão. A conversão usa a GPU NVIDIA por meio do [NVEncC](https://github.com/rigaya/NVEnc). **O programa não examina se o vídeo realmente é 60i/TFF antes de aplicar esse perfil fixo**; confira a fonte para evitar um resultado inadequado.
 
-## Requisitos e implantação
+## Comece pela distribuição pronta
 
-- **Windows 10 ou 11**, com GPU NVIDIA e driver compatíveis com os recursos de decodificação, codificação HEVC de 10 bits e filtros utilizados pelo NVEncC.
-- **NVEncC**: baixe uma versão para Windows nas [versões oficiais](https://github.com/rigaya/NVEnc/releases), extraia o pacote e mantenha seus arquivos juntos. Recomenda-se a versão 9.18 ou posterior; versões anteriores geram um aviso no log por causa da sincronia. O programa não instala o NVEncC automaticamente.
-- **Python 3.10 ou superior** e `pip` para executar o código-fonte ou compilar. O executável já compilado dispensa a instalação do Python na máquina de destino.
-- **ffprobe**, componente do FFmpeg, é opcional. Para habilitar a leitura de duração e a verificação de áudio, instale-o e inclua a pasta que contém `ffprobe.exe` no `PATH` do Windows; confirme em um novo PowerShell com `ffprobe -version`.
-- Espaço livre e permissão de escrita na pasta do arquivo de entrada, onde serão gravados o vídeo e o log da codificação.
+A [página de releases](https://github.com/mateusb6315/mpeg-ts-converter/releases) contém as versões publicadas, incluindo a [beta 0.2](https://github.com/mateusb6315/mpeg-ts-converter/releases/tag/beta-0.2). Para usar uma distribuição:
 
-O NVEncC pode ser localizado pela variável de ambiente `nvenc64`, pelo `PATH`, ao lado da aplicação ou em `C:\Program Files\NVEncC_9.31_x64`. Na inicialização, a aplicação também consulta a variável no Registro do Windows. Se não encontrar o executável, oferece um seletor para `NVEncC64.exe` ou `nvenc64.exe`. A escolha vale para a sessão atual e o programa tenta persistir o caminho na variável de usuário `nvenc64` no Registro.
+1. Baixe o arquivo ZIP da versão desejada e **extraia todo o conteúdo** para uma pasta com permissão de escrita. Não execute o programa diretamente de dentro do ZIP.
+2. Instale ou extraia o NVEncC conforme a seção seguinte. Tenha uma GPU e um driver NVIDIA compatíveis.
+3. Abra `p_broadcast.exe` na pasta extraída, mantendo a subpasta `_internal` ao lado do executável. O nome do executável ainda reflete o nome interno anterior do projeto.
+4. Se o programa não localizar o NVEncC, selecione `NVEncC64.exe` ou `nvenc64.exe` quando solicitado.
+5. Clique na área **“Selecione ou arraste um arquivo .ts aqui”** ou solte nela um único arquivo `.ts`. A conversão começa imediatamente.
 
-## Dependências
+A distribuição inclui o runtime Python e a interface PyQt6. **NVEncC e ffprobe não são incluídos.** Não é preciso instalar Python para executar o ZIP compilado.
 
-| Dependência | Finalidade | Instalação |
-| --- | --- | --- |
-| PyQt6 `>=6.5.0` | Interface gráfica e comunicação entre threads | `requirements.txt` |
-| pytest `>=8.0.0` | Execução dos testes automatizados | `requirements.txt` |
-| PyInstaller `>=6.22,<7` | Geração da distribuição Windows | `requirements-build.txt`, que também inclui `requirements.txt` |
-| NVEncC | Decodificação, desentrelaçamento e codificação | Download e extração separados |
-| ffprobe | Sondagem e verificação de mídia, opcionais | Instalação separada no `PATH` |
+## Requisitos e ferramentas externas
 
-Além dessas dependências, o código usa a biblioteca padrão do Python. A distribuição compilada inclui Python e PyQt6, mas não inclui NVEncC nem ffprobe.
+- **Sistema:** Windows 10 ou 11, GPU NVIDIA e driver compatíveis com o NVEncC e a codificação HEVC de 10 bits. A velocidade e a possibilidade de conversão dependem do hardware e dos recursos suportados pelo codificador.
+- **NVEncC obrigatório:** baixe a versão Windows nas [versões oficiais do NVEncC](https://github.com/rigaya/NVEnc/releases), extraia o pacote e mantenha seus arquivos juntos. A aplicação registra um aviso quando detecta versão anterior à 9.18; use uma versão atual para evitar problemas conhecidos de sincronia.
+- **ffprobe opcional:** é parte do FFmpeg. Coloque `ffprobe.exe` no `PATH` do Windows para mostrar a duração da entrada e permitir a sondagem e a conferência das faixas de áudio. Em um novo PowerShell, confirme com `ffprobe -version`. Sem ele, a conversão ainda pode ocorrer, mas duração, estimativa de progresso e validação de áudio ficam limitadas.
+- **Arquivos:** a pasta do `.ts` precisa ter espaço livre e permitir escrita, pois o `.mkv` e o log da codificação são criados nela.
 
-## Quick start
+Na inicialização, a aplicação procura o NVEncC na variável `nvenc64` da sessão ou do Registro do Windows, depois no `PATH`, ao lado do programa e na pasta padrão `C:\Program Files\NVEncC_9.31_x64`. A variável pode apontar para o executável ou para a pasta que o contém. Se a busca falhar, a janela pergunta se você deseja selecionar o arquivo manualmente e oferece um link para download. O botão **“Selecionar nvenc64”** permanece disponível até uma seleção aceita. A escolha é aplicada à sessão atual e o programa tenta salvá-la na variável de ambiente do usuário para as próximas execuções. A seleção verifica nome e existência do arquivo; a compatibilidade real é verificada quando o NVEncC é usado.
 
-No PowerShell, a partir da raiz do projeto:
+## Executar pelo código-fonte
+
+Use **Python 3.13** para seguir tanto os arquivos de dependências quanto o `pyproject.toml`. O código-fonte pode ser instalado com `pip`; o Poetry é opcional. Se ainda não tiver o projeto, obtenha-o com `git clone` e entre na pasta criada:
 
 ```powershell
-python -m venv .venv
+git clone https://github.com/mateusb6315/mpeg-ts-converter.git
+cd mpeg-ts-converter
+```
+
+No PowerShell, na raiz do repositório:
+
+```powershell
+py -3.13 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
 python main.py
 ```
 
-Para iniciar sem uma janela de console, use `pythonw main.py` no ambiente configurado. Se o NVEncC ainda não for encontrado, siga as instruções da janela e selecione o executável extraído. Depois clique na área de seleção ou arraste um único arquivo `.ts` para a janela: a conversão começa automaticamente.
+`requirements.txt` instala PyQt6 (`>=6.5.0`) e pytest (`>=8.0.0`). O arquivo `pyproject.toml` declara Python `>=3.13` e PyQt6 `>=6.12.0,<7`; `poetry.lock` fixa as versões resolvidas para o fluxo com Poetry. Se você optar por esse fluxo, instale o Poetry separadamente e execute:
 
-Se já tiver uma distribuição compilada, execute `Projeto Broadcast.exe` dentro da pasta da distribuição, mantendo seus arquivos juntos. As ferramentas externas e os requisitos de GPU continuam necessários.
-
-## Fluxo de operação
-
-1. Ao iniciar, `main.py` configura o log e o tema, cria a janela e conecta os controladores. A busca pelo NVEncC ocorre em segundo plano. Se ele não for encontrado, a interface oferece seleção manual e um link para download.
-2. Escolha um arquivo local `.ts` clicando na área indicada ou arrastando-o para a janela. A aplicação verifica a existência e a extensão; não verifica se o conteúdo realmente é 60i ou TFF. O perfil é fixo, portanto use uma fonte adequada.
-3. O painel mostra nome, tamanho e, quando disponível, duração. O serviço consulta o ffprobe para descobrir as faixas e estimar o total de quadros; se a sondagem falhar ou estiver indisponível, a conversão ainda pode prosseguir e a cópia de áudio é solicitada sem seleção explícita de faixas.
-4. O NVEncC é executado em uma thread de trabalho. A interface acompanha o progresso e os tempos decorrido e estimado. Apenas um arquivo é processado por vez. A estimativa depende dos dados fornecidos pelo codificador e pela sondagem.
-5. O resultado é gravado na mesma pasta, com o nome `<nome>_60fps_bwdif.mkv`. Um log de codificação com data e hora também é criado nessa pasta após o processo retornar. Ao concluir, a janela informa o sucesso e volta ao estado inicial; em caso de erro, mostra uma mensagem.
-6. Para interromper uma conversão, feche a janela e confirme a saída. O processo do codificador é encerrado; pode restar um arquivo de saída incompleto, e o log da codificação pode não ser gravado nesse caso.
-
-## Estrutura de módulos
-
-```text
-main.py                         Composição e inicialização da aplicação
-config/
-  configuracoes.py              Caminhos, ferramentas e parâmetros de conversão
-  interface.py                  Textos, dimensões, cores e configuração de log
-modelos/
-  conversao.py                  Estados, dados e regras puras da conversão
-servicos/
-  arquivo_servico.py            Validação, sondagem e busca de executáveis
-  conversao_servico.py          Execução do NVEncC, progresso e logs
-  nvenc_config_servico.py       Detecção e configuração da variável nvenc64
-controladores/
-  conversao_controlador.py      Fluxo da janela, estados e progresso
-  conversao_trabalhador.py      Conversão em QThread e sinais de resultado
-  verificador_nvenc_trabalhador.py  Busca do NVEncC e seleção manual
-visoes/
-  janela_principal.py           Janela, seleção, arraste e diálogos
-  componentes_visao.py          Componentes e caixas de mensagem
-  estilos_visao.py              Estilos QSS
-  tema_visao.py                 Tema claro da aplicação
-utilitarios/formatacao.py       Formatação de valores e argumentos
-scripts/compilar.py             Compilação e versionamento da distribuição
-tests/                          Testes automatizados
+```powershell
+poetry install --no-root
+poetry run python main.py
 ```
 
-O projeto segue uma organização MVC: os modelos concentram regras e dados, os serviços isolam operações externas, as visões apresentam a interface e os controladores coordenam os sinais e o trabalho em segundo plano. `main.py` cria e conecta essas partes.
+O uso de `--no-root` executa a aplicação diretamente a partir do repositório, sem precisar empacotar o projeto como biblioteca Python. Para abrir a interface sem console com o ambiente virtual do exemplo, use `.\.venv\Scripts\pythonw.exe main.py`.
 
-## Informações importantes
+## Como usar a interface
 
-### Perfil de conversão e áudio
+1. Abra o programa e aguarde a busca inicial pelo NVEncC. Se aparecer a pergunta de seleção manual, indique o executável extraído. Se preferir instalá-lo depois, use o botão que ficará visível na janela.
+2. Escolha um arquivo local com extensão `.ts` pelo clique na área à esquerda ou arraste **exatamente um** arquivo para a janela. Outros formatos, múltiplos arquivos e caminhos inexistentes são recusados. A extensão é verificada sem diferenciar maiúsculas e minúsculas; o conteúdo do vídeo não é analisado para confirmar TFF/60i.
+3. A janela mostra nome, tamanho, duração quando conhecida, status, tempo decorrido e tempo restante estimado. O nome longo aparece abreviado; passe o cursor sobre ele para ver o caminho completo. Durante a conversão, não é possível iniciar outro arquivo.
+4. Aguarde o aviso de conclusão. Após fechar o aviso, a janela volta a aceitar outro `.ts`. Em caso de falha, ela mostra uma mensagem; consulte os logs descritos abaixo para obter mais detalhes.
+5. Para cancelar uma conversão, feche a janela e confirme. O codificador recebe a solicitação de interrupção. Um arquivo `.mkv` incompleto pode permanecer na pasta; confira-o antes de usá-lo ou iniciar uma nova tentativa.
 
-O perfil usa entrada TFF, `--vpp-bwdif mode=bob,order=tff`, sincronização de taxa constante (`--avsync forcecfr`), HEVC Main10, preset `p7`, QVBR 18 e AQ espacial e temporal. Os parâmetros ficam em `config/configuracoes.py`; a interface não oferece escolha de perfil. A taxa de 59,94 fps também é usada para estimar o progresso, não como opção explícita de taxa de saída no comando.
+O resultado é salvo **na mesma pasta da entrada** como `<nome-original>_60fps_bwdif.mkv`. Exemplo: `programa.ts` gera `programa_60fps_bwdif.mkv`. Não há seleção de pasta de saída nem fila de arquivos. Uma nova conversão da mesma entrada usa o mesmo caminho de destino; preserve ou renomeie o resultado anterior antes de repetir a operação.
 
-Quando o ffprobe identifica as faixas de áudio, o programa solicita ao NVEncC a cópia de todas elas; se não houver áudio, não adiciona essa opção. Após uma conversão bem-sucedida, tenta comparar quantidade de faixas, canais e deslocamento inicial entre áudio e vídeo, com tolerância de 100 ms. Divergências são registradas no log da aplicação como avisos e não impedem a conclusão. A verificação depende dos dados disponíveis no ffprobe e não substitui a conferência do vídeo e áudio resultantes.
+## O que acontece durante a conversão
 
-O nome de saída é determinístico: uma nova conversão da mesma origem aponta para o mesmo caminho. Verifique ou renomeie uma saída anterior antes de converter novamente. Não há fila de arquivos nem seleção de destino na interface.
+O programa lê o tamanho do arquivo e tenta consultar a duração e as faixas com o ffprobe. Em seguida, chama o NVEncC fora da thread da interface. O perfil usa entrada TFF, `--vpp-bwdif mode=bob,order=tff`, `--avsync forcecfr`, HEVC Main10, preset `p7`, QVBR 18 e recursos de AQ. Os argumentos ficam em `config/configuracoes.py`; não há controles de qualidade ou filtro na janela. A taxa de 59,94 fps é usada pelo programa para **estimar** o total de quadros e o progresso, não é passada como opção explícita de taxa de saída ao NVEncC.
 
-### Logs e diagnóstico
+Quando o ffprobe identifica faixas de áudio, o programa solicita a cópia de todas elas. Se a sondagem não estiver disponível, solicita `--audio-copy` sem selecionar faixas específicas; se a sondagem indicar que não há áudio, não acrescenta essa opção. Após uma conversão concluída, compara a quantidade de faixas, os canais e o deslocamento inicial áudio/vídeo, quando há dados para isso. Diferenças superiores à tolerância de 100 ms são registradas como avisos no log da aplicação e **não bloqueiam a conclusão**. Confira o arquivo resultante com um reprodutor antes de descartá-lo ou distribuí-lo como versão final.
 
-- **Aplicação executada pelo código-fonte:** `projeto_broadcast.log` no diretório de trabalho a partir do qual foi iniciada.
-- **Aplicação compilada:** `%LOCALAPPDATA%\Projeto Broadcast\projeto_broadcast.log`.
-- **Codificação:** `<nome>_60fps_bwdif_encode_<data>_<hora>.log`, na pasta de origem, com comando, código de saída e mensagens do NVEncC. A gravação pode falhar se a pasta não permitir escrita.
+O progresso depende da saída do NVEncC e, quando disponível, da duração obtida pelo ffprobe. O tempo restante é uma estimativa e pode variar; a barra chega a 100% somente após a conclusão reportada pelo processo.
 
-Se houver falha, confira a compatibilidade da GPU e do driver, o caminho do NVEncC, o espaço em disco e os logs. Sem ffprobe no `PATH`, a duração e a validação de áudio podem ficar indisponíveis. A seleção manual do NVEncC verifica o nome e a existência do arquivo, mas não garante que ele seja executável ou compatível.
+## Logs e solução de problemas
 
-### Compilação para distribuição
+| Situação | Onde procurar |
+| --- | --- |
+| Aplicação iniciada pelo código-fonte | `projeto_broadcast.log` no diretório de trabalho usado para iniciá-la |
+| Aplicação compilada | `%LOCALAPPDATA%\Projeto Broadcast\projeto_broadcast.log` |
+| Codificação | `<nome-original>_60fps_bwdif_encode_<AAAAMMDD>_<HHMMSS>.log` na pasta do `.ts` |
 
-Em um ambiente Python no Windows, execute na raiz:
+O log da codificação registra o comando, o código de saída e mensagens do NVEncC. Ele é gravado quando o codificador retorna, inclusive com código de erro; um cancelamento ou uma falha antes dessa etapa pode impedir a sua criação. Se a pasta de origem não permitir escrita, o próprio log também pode faltar.
+
+Se o programa disser que o NVEncC não foi encontrado, confira o caminho selecionado, a variável `nvenc64` e a extração completa do pacote. Se a conversão falhar, verifique a versão do NVEncC, o driver, a compatibilidade da GPU, o espaço em disco e as mensagens dos logs. Se a duração aparecer indisponível, verifique `ffprobe -version` em um novo PowerShell e confirme que a pasta de `ffprobe.exe` está no `PATH`. O título interno da janela e alguns caminhos de log ainda usam “Projeto Broadcast”; isso não afeta os nomes dos arquivos de saída.
+
+## Estrutura do projeto
+
+| Caminho | Responsabilidade |
+| --- | --- |
+| `main.py` | Inicia o Qt, configura o log e conecta as camadas. |
+| `config/` | Parâmetros de conversão, caminhos, textos e aparência. |
+| `modelos/` | Estados, dados e regras de conversão sem acesso a arquivos ou interface. |
+| `servicos/` | Busca de executáveis, sondagem com ffprobe, execução do NVEncC e persistência da configuração. |
+| `controladores/` | Coordena seleção, estados, progresso e trabalhadores em `QThread`. |
+| `visoes/` | Janela, componentes, diálogos e estilos PyQt6. |
+| `utilitarios/` | Formatação de números, duração e texto. |
+| `scripts/compilar.py` | Gera e numera as distribuições Windows. |
+| `scripts/release.py` | Seleciona um prototype local e publica um ZIP em uma release do GitHub. |
+| `tests/` | Testes automatizados. |
+| `requirements*.txt`, `pyproject.toml`, `poetry.lock` | Definições de dependências para `pip`, build e Poetry. |
+| `LICENSE` | Texto integral da licença MIT. |
+
+A interface e os subprocessos ficam separados: a janela emite eventos, os controladores coordenam o fluxo e os serviços executam as operações externas. Essa divisão permite manter a interface responsiva durante a conversão.
+
+## Compilar e publicar uma versão
+
+Para gerar uma distribuição Windows, instale as dependências de build e execute o script na raiz do projeto:
 
 ```powershell
 python -m pip install -r requirements-build.txt
 python scripts/compilar.py
 ```
 
-O script usa o PyInstaller em modo de pasta e cria `prototypes/beta 0.1/`, `beta 0.2/` e assim por diante. Distribua a pasta inteira. Ele registra as versões em `prototypes/historico.json`, preserva versões anteriores e recupera registros interrompidos a partir dos arquivos `build.json`. Um histórico inválido deve ser corrigido antes de uma nova compilação. Compilações simultâneas são bloqueadas; a presença de `.compilacao.lock` após a execução não significa que o bloqueio ainda esteja ativo. Em falha de compilação, são exibidas as últimas linhas da saída do PyInstaller.
+`requirements-build.txt` inclui as dependências de execução e PyInstaller `>=6.22,<7`. O script cria a próxima pasta `prototypes/beta 0.N/` com `p_broadcast.exe`, `_internal/` e `build.json`. A numeração considera as pastas e o arquivo `prototypes/historico.json`; versões anteriores não são sobrescritas. O histórico registra a data e as versões de Python e PyInstaller. Se uma compilação for interrompida após a criação da pasta, o script tenta recuperar o registro a partir de `build.json` na próxima execução. Um histórico inválido precisa ser corrigido antes de prosseguir. O arquivo `.compilacao.lock` pode permanecer após o término sem indicar bloqueio ativo.
 
-### Testes
+Para publicar pelo script de release, tenha o [GitHub CLI (`gh`)](https://cli.github.com/) instalado e autenticado, acesso ao repositório remoto e um prototype local com `.exe`:
 
-Com as dependências instaladas, execute:
+```powershell
+python scripts/release.py
+```
+
+Esse script escolhe **a pasta `beta 0.N` local com o maior número**, compacta seu conteúdo e cria a próxima tag de release ainda livre no GitHub no formato **`beta-0.N`**. A numeração da tag é calculada pelas tags e releases remotas; por isso, confira se ela corresponde à versão da pasta antes de executar o script quando houver builds ou tags feitos fora desse fluxo. Uma release publicada disponibiliza o ZIP na página de releases. O script de compilação, por si só, produz apenas a pasta local.
+
+## Desenvolvimento e verificações
+
+Para executar a suíte de testes e a auditoria de arquitetura, com o ambiente de desenvolvimento instalado:
 
 ```powershell
 python -m pytest -v
 python .agents/skills/arquitetura-mvc-pyqt6/scripts/validar_arquitetura.py
 ```
 
-Os testes automatizados e a auditoria de arquitetura ajudam a verificar o código; a execução real da conversão depende também das ferramentas externas e do hardware compatível.
+Essas verificações cobrem regras e integração interna. Uma conversão real também depende de um arquivo de entrada adequado, do NVEncC e do hardware compatível.
 
-## Licença MIT
+## Licença
 
-O MPEG-TS Converter está distribuído sob os termos da licença MIT, conforme o texto integral e o aviso de direitos autorais no arquivo [`LICENSE`](LICENSE). A licença permite usar, copiar, modificar, mesclar, publicar, distribuir, sublicenciar e vender cópias do software, desde que o aviso de copyright e o texto da licença acompanhem as cópias ou partes substanciais do software. O software é fornecido “como está”, sem garantias. As dependências e ferramentas de terceiros podem ter licenças próprias.
+O MPEG-TS Converter é distribuído sob a **licença MIT**. Ela permite usar, modificar e distribuir o projeto, inclusive comercialmente, desde que o aviso de direitos autorais e o texto da licença acompanhem as cópias ou partes substanciais. O software é fornecido sem garantias. Consulte o texto completo em [`LICENSE`](LICENSE). NVEncC, FFmpeg/ffprobe e demais dependências seguem suas próprias licenças.
