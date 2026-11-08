@@ -1,6 +1,8 @@
 """Compila e versiona as distribuições do Projeto Broadcast."""
 
 import json
+import shutil
+import time
 import subprocess
 import sys
 import tempfile
@@ -90,6 +92,27 @@ def compilar(diretorio: Path, executar=subprocess.run,
         while destino.exists():
             destino = diretorio / f"{NOME} {versao} ({numero})"
             numero += 1
-        pasta.rename(destino)
+        _publicar_pasta(pasta, destino)
     status(f"Compilação concluída: {destino}")
     return destino
+
+
+def _publicar_pasta(pasta: Path, destino: Path) -> None:
+    """Tenta novamente bloqueios temporários e recorre à cópia quando necessário."""
+    for tentativa in range(10):
+        try:
+            pasta.rename(destino)
+            return
+        except PermissionError:
+            if destino.exists():
+                raise FileExistsError(f"Destino já existe: {destino}")
+            if tentativa < 9:
+                time.sleep(0.5)
+    status("Movimentação bloqueada; tentando copiar a distribuição...")
+    # mkdir exclusivo evita sobrescrever uma pasta criada por outro processo.
+    destino.mkdir()
+    try:
+        shutil.copytree(pasta, destino, dirs_exist_ok=True)
+    except Exception:
+        shutil.rmtree(destino, ignore_errors=True)
+        raise

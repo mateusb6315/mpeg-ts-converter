@@ -41,3 +41,39 @@ def test_log_executavel_usa_pasta_do_usuario(tmp_path, monkeypatch):
     caminho = _obter_caminho_log()
     assert caminho == tmp_path / "Projeto Broadcast" / "projeto_broadcast.log"
     assert caminho.parent.is_dir()
+
+
+def test_publicacao_recupera_bloqueio_transitorio(tmp_path, monkeypatch):
+    from pathlib import Path
+    from scripts.distribuicao.compilador import _publicar_pasta
+    origem = tmp_path / "origem"
+    origem.mkdir()
+    (origem / "arquivo").write_text("ok")
+    destino = tmp_path / "destino"
+    original = Path.rename
+    chamadas = []
+    def renomear(pasta, alvo):
+        chamadas.append(1)
+        if len(chamadas) == 1:
+            raise PermissionError("bloqueado")
+        return original(pasta, alvo)
+    monkeypatch.setattr(Path, "rename", renomear)
+    monkeypatch.setattr("scripts.distribuicao.compilador.time.sleep", lambda _: None)
+    _publicar_pasta(origem, destino)
+    assert (destino / "arquivo").read_text() == "ok"
+    assert len(chamadas) == 2
+
+
+def test_publicacao_copia_quando_renomeacao_falha(tmp_path, monkeypatch):
+    from pathlib import Path
+    from scripts.distribuicao.compilador import _publicar_pasta
+    origem = tmp_path / "origem"
+    origem.mkdir()
+    (origem / "arquivo").write_text("ok")
+    def negar(*args):
+        raise PermissionError("bloqueado")
+    monkeypatch.setattr(Path, "rename", negar)
+    monkeypatch.setattr("scripts.distribuicao.compilador.time.sleep", lambda _: None)
+    destino = tmp_path / "destino"
+    _publicar_pasta(origem, destino)
+    assert (destino / "arquivo").read_text() == "ok"
