@@ -28,3 +28,7 @@ dist/
 
 # Protótipos, builds e pacotes de distribuição gerados
 prototypes/
+
+# Documentação
+
+docs/
