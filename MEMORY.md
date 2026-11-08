@@ -41,8 +41,10 @@ A suíte é executada com `python -m pytest -v`; a auditoria com `python .agents
 
 ## Implementação local da beta 0.3
 
-Compiladores separados com input manual e --versao para CI. Beta aceita nomes livres
-Windows. Destinos isolados; pastas existentes geram uma nova pasta numerada.
+Compiladores separados com input manual e --versao para CI. Ambos aceitam nomes
+livres válidos no Windows. Destinos isolados; pastas existentes geram uma nova
+pasta numerada. O compilador não usa histórico; na publicação tenta novamente
+movimentações com acesso negado e, se necessário, copia a pasta.
 Release verifica manifesto explícito; publicação cria rascunho, exige origem limpa e
 recusa tag existente. Consultar docs/distribuicao.md; nenhuma publicação foi executada.
 Conversão preserva fluxos de vídeo na validação A/V, usa parcial isolado e recusa

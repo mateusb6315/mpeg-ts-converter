@@ -12,6 +12,13 @@ Também aceitam `--versao`; no CI esse argumento é obrigatório.
 Produção fica em `dist/producao/mpeg-ts-converter <versao>`; beta em
 `prototypes/beta/mpeg-ts-converter <versao>`.
 Versões podem ser reutilizadas; se a pasta já existir, uma nova pasta numerada é criada.
+O build não consulta nem registra histórico de versões.
+
+Após o PyInstaller, o script tenta mover a pasta gerada para o destino. Em caso
+de acesso negado, tenta novamente e, se necessário, tenta copiar os arquivos.
+Se a cópia falhar, confira as permissões de leitura e escrita e se outro processo
+está bloqueando os arquivos. Bloqueios transitórios foram simulados em testes;
+a causa de um erro específico precisa ser investigada no ambiente afetado.
 
 Cada pacote contém executável, runtime, README, licença, licenças coletadas das
 bibliotecas instaladas e build.json com commit, ambiente e hashes. A coleta não

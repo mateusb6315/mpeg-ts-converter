@@ -34,10 +34,11 @@ Testes automatizados não substituem uma conversão real com GPU, driver, NVEncC
 
 ## Compilação e publicação
 
-`scripts/compilar.py` compila produção com versão X.Y.Z em `dist/producao/`.
-`scripts/compilar_beta.py` compila beta com nome Windows livre em `prototypes/beta/`;
-ambos pedem a versão por input, aceitando `--versao` para CI. Convenção beta:
-`0.0.3-beta1`. Compartilham bloqueio, histórico e recuperação em `scripts/distribuicao/`.
+`scripts/compilar.py` compila produção em `dist/producao/`; `scripts/compilar_beta.py`
+compila beta em `prototypes/beta/`. Ambos aceitam versão livre válida para pasta
+Windows por input ou `--versao` para CI. Não consultam histórico; destinos existentes
+geram pasta numerada. O código compartilhado em `scripts/distribuicao/` tenta
+novamente a movimentação bloqueada e usa cópia como alternativa.
 `scripts/release.py --artefato <pasta>` verifica o manifesto localmente. Publicação
 exige `--publicar --notas <arquivo>` e cria rascunho; não executar sem autorização.
 Execute também `python scripts/auditar_workspace.py` para descobrir novos módulos.

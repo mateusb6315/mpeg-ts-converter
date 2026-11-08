@@ -95,8 +95,8 @@ Se o programa disser que o NVEncC não foi encontrado, confira o caminho selecio
 | `controladores/` | Coordena seleção, estados, progresso e trabalhadores em `QThread`. |
 | `visoes/` | Janela, componentes, diálogos e estilos PyQt6. |
 | `utilitarios/` | Formatação de números, duração e texto. |
-| `scripts/compilar.py` | Gera e numera as distribuições Windows. |
-| `scripts/release.py` | Seleciona um prototype local e publica um ZIP em uma release do GitHub. |
+| `scripts/compilar.py`, `scripts/compilar_beta.py` | Geram distribuições Windows para produção e beta. |
+| `scripts/release.py` | Verifica um artefato informado e pode preparar uma release em rascunho. |
 | `tests/` | Testes automatizados. |
 | `requirements*.txt`, `pyproject.toml`, `poetry.lock` | Definições de dependências para `pip`, build e Poetry. |
 | `LICENSE` | Texto integral da licença MIT. |
@@ -112,7 +112,10 @@ Ambos aceitam versão livre válida como nome de pasta no Windows. Para CI use
 
 Produção fica em `dist/producao/mpeg-ts-converter <versao>`; beta em
 `prototypes/beta/mpeg-ts-converter <versao>`.
-Se a pasta já existir, uma nova pasta numerada é criada. Nenhum compilador
+Se a pasta já existir, uma nova pasta numerada é criada. Em caso de acesso negado
+ao mover a pasta, o script repete a operação e tenta copiá-la. Se a cópia também
+falhar, confira permissões e processos que possam estar bloqueando os arquivos.
+Nenhum compilador
 publica no GitHub. Consulte [distribuição](docs/distribuicao.md) para manifesto,
 verificação e preparação explícita de rascunho de release.
 
