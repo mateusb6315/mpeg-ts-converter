@@ -6,11 +6,9 @@ A interface, em português, permite escolher ou arrastar o arquivo, acompanha o 
 
 ## Comece pela distribuição pronta
 
-A [página de releases](https://github.com/mateusb6315/mpeg-ts-converter/releases) contém as versões publicadas, incluindo a [beta 0.0.3](https://github.com/mateusb6315/mpeg-ts-converter/releases/tag/0.0.3-beta). Para usar uma distribuição:
-
-1. Baixe o arquivo ZIP da versão desejada e **extraia todo o conteúdo** para uma pasta com permissão de escrita. Não execute o programa diretamente de dentro do ZIP.
+1. Baixe o arquivo ZIP da versão mais recente em [releases](https://github.com/mateusb6315/mpeg-ts-converter/releases) e **extraia todo o conteúdo** para uma pasta com permissão de escrita. Não execute o programa diretamente de dentro do ZIP.
 2. Instale ou extraia o NVEncC conforme a seção seguinte. Tenha uma GPU e um driver NVIDIA compatíveis.
-3. Abra `mpeg-ts-converter.exe` na pasta extraída, mantendo a subpasta `_internal` ao lado do executável.
+3. Abra o executável principal na pasta extraída.
 4. Se o programa não localizar o NVEncC, selecione `NVEncC64.exe` ou `nvenc64.exe` quando solicitado.
 5. Clique na área **“Selecione ou arraste um arquivo .ts aqui”** ou solte nela um único arquivo `.ts`. A conversão começa imediatamente.
 
