@@ -23,12 +23,28 @@ ffprobe no PATH é opcional: obtém duração e fluxos e permite comparar faixas
 
 ## Ambiente e distribuição
 
-`requirements.txt` declara PyQt6 >=6.5 e pytest >=8; `requirements-build.txt` acrescenta PyInstaller >=6.22,<7. `pyproject.toml` declara Python >=3.13 e PyQt6 >=6.12,<7, e `poetry.lock` registra a resolução do Poetry. Os metadados do pyproject ainda usam `projeto-broadcast` e autor de exemplo.
+`requirements.txt` fixa execução; `requirements-dev.txt` adiciona pytest e
+`requirements-build.txt` adiciona PyInstaller/hooks. Pyproject e poetry.lock incluem
+grupos dev/build. Ambiente suportado de desenvolvimento: Python 3.13.
 
-`scripts/compilar.py` gera `prototypes/beta 0.N/` com `p_broadcast.exe`, usa histórico JSON local, bloqueio e recuperação de publicação interrompida. `scripts/release.py` compacta o prototype local de maior número e escolhe a próxima tag remota `beta-0.N`; os dois números podem divergir. A pasta `prototypes/` inteira é ignorada pelo Git; seu histórico local não é compartilhado entre clones. O README referencia a release beta 0.2. A disponibilidade remota deve ser verificada novamente quando necessário.
+Compiladores de produção/beta solicitam versão manual ou recebem --versao para CI.
+O beta aceita nome livre válido Windows; produção exige X.Y.Z. Distribuição e
+verificação estão descritas em docs/distribuicao.md. Os artefatos beta 0.2 existentes
+permanecem como referência, sem associação garantida com o HEAD.
 
-A distribuição inclui Python e PyQt6, mas não NVEncC ou ffprobe. O log da aplicação executada pelo código fica no diretório de trabalho; no executável, em `%LOCALAPPDATA%\Projeto Broadcast\projeto_broadcast.log`. O log de codificação fica ao lado do vídeo, quando pode ser gravado. O projeto usa a licença MIT em `LICENSE`.
+Logs compilados continuam em %LOCALAPPDATA%\Projeto Broadcast. NVEncC e ffprobe
+não são incluídos. O projeto conserva sua licença MIT.
 
 ## Verificação e próximas iterações
 
 A suíte é executada com `python -m pytest -v`; a auditoria com `python .agents/skills/arquitetura-mvc-pyqt6/scripts/validar_arquitetura.py`. Não foram executadas nesta atualização documental. Leia `AGENTS.md` para os limites de arquitetura e os cuidados de build e publicação; consulte as skills do workspace conforme a área alterada.
+
+## Implementação local da beta 0.3
+
+Compiladores separados com input manual e --versao para CI. Beta aceita nomes livres
+Windows; recomendação 0.0.3-beta1. Produção exige X.Y.Z. Destinos e históricos isolados.
+Release verifica manifesto explícito; publicação cria rascunho, exige origem limpa e
+recusa tag existente. Consultar docs/distribuicao.md; nenhuma publicação foi executada.
+Conversão preserva fluxos de vídeo na validação A/V, usa parcial isolado e recusa
+colisão. Metadados da interface são coletados no worker. Plano original permanece
+como referência histórica, com pendências de validação real e otimização do runtime.

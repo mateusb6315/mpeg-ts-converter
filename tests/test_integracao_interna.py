@@ -98,6 +98,7 @@ def test_salvar_executavel_nvenc_manual_atualiza_ambiente(
         lambda nome, valor: chamadas_persistencia.append((nome, valor)),
     )
 
+    monkeypatch.setenv("nvenc64", "")
     sucesso = salvar_executavel_nvenc_manual(executavel)
     assert sucesso is True
     assert os.environ.get("nvenc64") == str(executavel.resolve())

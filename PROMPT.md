@@ -1,3 +1,6 @@
+> Documento histórico da migração inicial. As orientações atuais estão em AGENTS.md
+> e o comportamento implementado no README e no código.
+
 # Prompt: Refatoração Modular de Script Python com Interface Gráfica PyQt6 (MVC + SRP + Baixo Acoplamento)
 
 ## 1. Papel

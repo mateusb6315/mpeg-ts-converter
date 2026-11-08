@@ -20,6 +20,7 @@ from visoes.componentes_visao import (
     PainelInformacoes, ZonaArraste, criar_botao_selecionar_nvenc,
     exibir_caixa_mensagem, exibir_pergunta_sim_nao,
 )
+from visoes.arraste_visao import extrair_caminho_unico
 from visoes.estilos_visao import gerar_estilo_barra_progresso, gerar_estilo_janela
 
 
@@ -35,6 +36,7 @@ class JanelaPrincipal(QWidget):
         super().__init__()
         self._validar_arquivo = validar_arquivo
         self._ao_cancelar_conversao: Callable[[], None] | None = None
+        self._verificando = False
         self._ocupada = False
         self._configurar_janela()
         self._zona_arraste = ZonaArraste(self)
@@ -44,6 +46,16 @@ class JanelaPrincipal(QWidget):
         self._conectar_eventos_internos()
         self._montar_layout()
         self.exibir_estado_inicial()
+
+    def definir_verificacao_ambiente(self, ativa: bool) -> None:
+        """Impede iniciar conversão enquanto a descoberta inicial está pendente."""
+        self._verificando = ativa
+        if ativa:
+            self.exibir_status("Verificando ferramentas…")
+
+    def entrada_disponivel(self) -> bool:
+        """Informa se a descoberta acabou e a configuração permite selecionar mídia."""
+        return not self._verificando and not self.esta_botao_nvenc_visivel()
 
     def definir_acao_cancelamento(self, acao: Callable[[], None]) -> None:
         """Registra a função a ser invocada caso o usuário feche durante a conversão."""
@@ -94,12 +106,18 @@ class JanelaPrincipal(QWidget):
         """Exibe uma mensagem curta no campo de status do painel."""
         self._painel_info.atualizar_status(mensagem)
 
+    def definir_caminho_resultado(self, caminho: str) -> None:
+        """Registra o caminho retornado para apresentação na conclusão."""
+        self._caminho_resultado = caminho
+
     def exibir_popup_conclusao(self) -> None:
         """Garante a barra em 100%, mostra status Concluído e abre o popup modal OK."""
         self._barra_progresso.setValue(100)
         self._barra_progresso.setFormat("100%")
         self._painel_info.atualizar_status(STATUS_CONCLUIDO)
-        exibir_caixa_mensagem(self, QMessageBox.Icon.Information, MENSAGEM_POPUP_CONCLUSAO)
+        caminho = getattr(self, "_caminho_resultado", "")
+        mensagem = f"{MENSAGEM_POPUP_CONCLUSAO}\n{caminho}"
+        exibir_caixa_mensagem(self, QMessageBox.Icon.Information, mensagem)
 
     def exibir_popup_erro(self, mensagem: str) -> None:
         """Atualiza o status para falha e exibe um popup crítico com botão único OK."""
@@ -136,7 +154,7 @@ class JanelaPrincipal(QWidget):
             if evento is not None:
                 evento.ignore()
             return
-        caminho = _extrair_caminho_unico(evento)
+        caminho = extrair_caminho_unico(evento)
         if caminho is not None and self._validar_arquivo(caminho):
             evento.acceptProposedAction()
             return
@@ -149,7 +167,7 @@ class JanelaPrincipal(QWidget):
             if evento is not None:
                 evento.ignore()
             return
-        caminho = _extrair_caminho_unico(evento)
+        caminho = extrair_caminho_unico(evento)
         if caminho is None or not self._validar_arquivo(caminho):
             self._painel_info.atualizar_status(STATUS_ARQUIVO_INVALIDO)
             evento.ignore()
@@ -169,6 +187,9 @@ class JanelaPrincipal(QWidget):
             return
         if self._ao_cancelar_conversao is not None:
             self._ao_cancelar_conversao()
+            self.exibir_status("Cancelando… aguarde o encerramento")
+            evento.ignore()
+            return
         evento.accept()
 
     def _configurar_janela(self) -> None:
@@ -223,15 +244,3 @@ class JanelaPrincipal(QWidget):
         linha_superior.addWidget(self._painel_info, stretch=1)
         layout_raiz.addLayout(linha_superior, stretch=1)
         layout_raiz.addWidget(self._barra_progresso)
-
-
-def _extrair_caminho_unico(evento: QDragEnterEvent | QDropEvent) -> Path | None:
-    """Extrai o Path se o evento de arraste contiver exatamente um arquivo local."""
-    dados_mime = evento.mimeData()
-    if dados_mime is None or not dados_mime.hasUrls():
-        return None
-    urls = dados_mime.urls()
-    if len(urls) != 1 or not urls[0].isLocalFile():
-        return None
-    caminho_texto = urls[0].toLocalFile()
-    return Path(caminho_texto) if caminho_texto else None

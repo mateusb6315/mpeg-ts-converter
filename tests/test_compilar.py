@@ -11,16 +11,18 @@ from scripts.compilar import compilar, proxima_versao
 @pytest.fixture(autouse=True)
 def _versao_pyinstaller_falsa(monkeypatch):
     """Os testes simulados não exigem a instalação do PyInstaller."""
-    monkeypatch.setattr("scripts.compilar.importlib.metadata.version", lambda nome: "teste")
+    monkeypatch.setattr("scripts.distribuicao.compilador.importlib.metadata.version", lambda nome: "teste")
+    monkeypatch.setattr("scripts.distribuicao.manifesto.preparar_pacote",
+                        lambda pasta, versao, canal: {})
 
 
 def _compilador_falso(comando, **kwargs):
     """Cria uma distribuição de teste no local solicitado ao PyInstaller."""
     destino = comando[comando.index("--distpath") + 1]
     from pathlib import Path
-    pasta = Path(destino) / "Projeto Broadcast"
+    pasta = Path(destino) / comando[comando.index("--name") + 1]
     pasta.mkdir(parents=True)
-    (pasta / "Projeto Broadcast.exe").write_bytes(b"teste")
+    (pasta / "p_broadcast.exe").write_bytes(b"teste")
 
 
 def _historico(diretorio):
@@ -67,8 +69,8 @@ def test_compila_sequencialmente_e_emite_status(tmp_path, capsys):
     """Publicações consecutivas registram e anunciam cada versão."""
     compilar(tmp_path, executar=_compilador_falso)
     compilar(tmp_path, executar=_compilador_falso)
-    assert (tmp_path / "beta 0.1" / "Projeto Broadcast.exe").is_file()
-    assert (tmp_path / "beta 0.2" / "Projeto Broadcast.exe").is_file()
+    assert (tmp_path / "beta 0.1" / "p_broadcast.exe").is_file()
+    assert (tmp_path / "beta 0.2" / "p_broadcast.exe").is_file()
     assert [item["versao"] for item in _historico(tmp_path)] == ["beta 0.1", "beta 0.2"]
     saida = capsys.readouterr().out
     assert "beta 0.1" in saida and "Fazendo a compilação..." in saida
@@ -79,7 +81,7 @@ def test_json_vazio_gera_primeira_versao(tmp_path):
     """Um historico.json vazio equivale a nenhuma versão registrada."""
     (tmp_path / "historico.json").write_text("", encoding="utf-8")
     compilar(tmp_path, executar=_compilador_falso)
-    assert (tmp_path / "beta 0.1" / "Projeto Broadcast.exe").is_file()
+    assert (tmp_path / "beta 0.1" / "p_broadcast.exe").is_file()
     assert [item["versao"] for item in _historico(tmp_path)] == ["beta 0.1"]
 
 
@@ -93,7 +95,7 @@ def test_json_somente_espacos_gera_primeira_versao(tmp_path):
 def test_json_inexistente_gera_primeira_versao(tmp_path):
     """Sem historico.json, a primeira compilação é beta 0.1."""
     compilar(tmp_path, executar=_compilador_falso)
-    assert (tmp_path / "beta 0.1" / "Projeto Broadcast.exe").is_file()
+    assert (tmp_path / "beta 0.1" / "p_broadcast.exe").is_file()
 
 
 def test_versao_removida_nao_e_reutilizada(tmp_path):
@@ -102,7 +104,7 @@ def test_versao_removida_nao_e_reutilizada(tmp_path):
         json.dumps([{"versao": "beta 0.12"}]), encoding="utf-8"
     )
     compilar(tmp_path, executar=_compilador_falso)
-    assert (tmp_path / "beta 0.13" / "Projeto Broadcast.exe").is_file()
+    assert (tmp_path / "beta 0.13" / "p_broadcast.exe").is_file()
 
 
 def test_compilacao_falha_sem_publicar_nem_consumir_versao(tmp_path):
@@ -130,7 +132,7 @@ def test_recupera_publicacao_interrompida_antes_do_registro(tmp_path):
     """Uma pasta publicada e ausente do histórico é registrada na próxima execução."""
     pasta = tmp_path / "beta 0.4"
     pasta.mkdir()
-    (pasta / "Projeto Broadcast.exe").write_bytes(b"teste")
+    (pasta / "p_broadcast.exe").write_bytes(b"teste")
     (pasta / "build.json").write_text(
         json.dumps({"versao": "beta 0.4", "data": "2026-01-01"}), encoding="utf-8"
     )

@@ -232,16 +232,16 @@ def _comparar_sincronia_av(
     v_dest = next((f for f in fluxos_saida if f.get("codec_type") == "video"), {})
     a_orig = [f for f in fluxos_origem if f.get("codec_type") == "audio"]
     a_dest = [f for f in fluxos_saida if f.get("codec_type") == "audio"]
-    try:
-        ini_v_orig, ini_v_dest = float(v_orig["start_time"]), float(v_dest["start_time"])
-        for indice, (orig, dest) in enumerate(zip(a_orig, a_dest), start=1):
-            off_orig = float(orig["start_time"]) - ini_v_orig
-            off_dest = float(dest["start_time"]) - ini_v_dest
+    for indice, (orig, dest) in enumerate(zip(a_orig, a_dest), start=1):
+        try:
+            valores = [float(f["start_time"]) for f in (v_orig, v_dest, orig, dest)]
+            if not all(math.isfinite(valor) for valor in valores):
+                raise ValueError
+            off_orig = valores[2] - valores[0]
+            off_dest = valores[3] - valores[1]
             if abs(off_orig - off_dest) > TOLERANCIA_DESLOCAMENTO_AV_SEGUNDOS:
-                problemas.append(
-                    f"faixa {indice}: deslocamento A/V mudou em "
-                    f"{off_orig:.3f}s → {off_dest:.3f}s"
-                )
-    except (KeyError, TypeError, ValueError):
-        pass
+                problemas.append(f"faixa {indice}: deslocamento A/V mudou em "
+                                 f"{off_orig:.3f}s → {off_dest:.3f}s")
+        except (KeyError, TypeError, ValueError):
+            problemas.append(f"faixa {indice}: sincronia A/V não verificável")
     return problemas

@@ -119,7 +119,11 @@ def sondar_fluxos_midia(caminho: Path) -> list[dict] | None:
     if not saida:
         return None
     try:
-        return json.loads(saida).get("streams", [])
+        dados = json.loads(saida)
+        fluxos = dados.get("streams") if isinstance(dados, dict) else None
+        if not isinstance(fluxos, list) or any(not isinstance(f, dict) for f in fluxos):
+            return None
+        return fluxos
     except ValueError:
         return None
 

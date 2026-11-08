@@ -34,6 +34,13 @@ Testes automatizados não substituem uma conversão real com GPU, driver, NVEncC
 
 ## Compilação e publicação
 
-`scripts/compilar.py` gera `prototypes/beta 0.N/` com `p_broadcast.exe`, histórico local, bloqueio e recuperação de builds interrompidos. `scripts/release.py` publica no GitHub e escolhe o maior prototype local e a próxima tag remota `beta-0.N` independentemente: verifique a correspondência antes de publicar. Use a skill `.agents/skills/compilacao-distribuicao-executavel/SKILL.md` ao alterar o pipeline. Não execute publicação, push ou release sem solicitação ou autorização aplicável.
+`scripts/compilar.py` compila produção com versão X.Y.Z em `dist/producao/`.
+`scripts/compilar_beta.py` compila beta com nome Windows livre em `prototypes/beta/`;
+ambos pedem a versão por input, aceitando `--versao` para CI. Convenção beta:
+`0.0.3-beta1`. Compartilham bloqueio, histórico e recuperação em `scripts/distribuicao/`.
+`scripts/release.py --artefato <pasta>` verifica o manifesto localmente. Publicação
+exige `--publicar --notas <arquivo>` e cria rascunho; não executar sem autorização.
+Execute também `python scripts/auditar_workspace.py` para descobrir novos módulos.
+Instale `requirements-dev.txt` para testes e `requirements-build.txt` para build.
 
 `prototypes/`, logs, caches e backups são ignorados pelo Git; não apague nem adicione artefatos locais inadvertidamente. Após mudanças relevantes, atualize README e memória quando necessário, mantendo licença e caminhos reais consistentes.

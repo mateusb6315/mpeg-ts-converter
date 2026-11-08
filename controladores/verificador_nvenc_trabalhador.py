@@ -72,6 +72,7 @@ class VerificadorNvencControlador(QObject):
 
     def iniciar_verificacao_em_segundo_plano(self) -> None:
         """Dispara a QThread que verifica o nvenc64 ao iniciar o software."""
+        self._janela.definir_verificacao_ambiente(True)
         thread = QThread(self)
         trabalhador = VerificadorNvencTrabalhador(self._verificar_nvenc)
         trabalhador.moveToThread(thread)
@@ -107,10 +108,14 @@ class VerificadorNvencControlador(QObject):
 
     def _ao_identificar_nvenc(self, _caminho: str) -> None:
         """Segue com o fluxo normal sem exibir popups quando o nvenc64 é encontrado."""
-        pass
+        self._janela.definir_verificacao_ambiente(False)
+        self._janela.exibir_status(STATUS_AGUARDANDO)
 
     def _ao_nao_identificar_nvenc(self) -> None:
         """Exibe os popups de seleção manual ou download e habilita o botão na GUI."""
+        self._janela.definir_verificacao_ambiente(False)
+        if getattr(self, "_encerrando", False):
+            return
         deseja_selecionar = self._janela.perguntar_selecao_manual_nvenc()
         if deseja_selecionar and self.selecionar_nvenc_manual():
             return

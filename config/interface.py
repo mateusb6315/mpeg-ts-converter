@@ -3,7 +3,7 @@
 from pathlib import Path
 
 # --- Identificação e Log da Aplicação ---
-TITULO_JANELA = "Projeto Broadcast - Conversor TS (HEVC 60p BWDIF)"
+TITULO_JANELA = "MPEG-TS Converter 0.0.3-beta1 (HEVC 60p BWDIF)"
 TITULO_POPUP = "Projeto Broadcast"
 TITULO_DIALOGO_NVENC = "Selecionar executável nvenc64"
 TITULO_DIALOGO_TS = "Selecionar arquivo .ts"

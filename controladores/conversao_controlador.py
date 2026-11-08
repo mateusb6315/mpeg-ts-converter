@@ -78,15 +78,15 @@ class ConversaoControlador(QObject):
             self._trabalhador.solicitar_cancelamento()
         if self._thread is not None and self._thread.isRunning():
             self._thread.quit()
-            self._thread.wait(5000)
+
 
     # --- Tratadores de Sinais da View e do Trabalhador ---
 
     def _ao_solicitar_selecao_ts(self) -> None:
         """Abre o seletor do Windows Explorer ao clicar na zona de arraste."""
-        if self._estado == EstadoConversao.CONVERTENDO:
+        if self._thread is not None:
             return
-        if self._janela.esta_botao_nvenc_visivel():
+        if not self._janela.entrada_disponivel():
             self._janela.exibir_status(STATUS_NVENC_PENDENTE)
             return
         escolhido = self._janela.selecionar_arquivo_ts_dialogo(
@@ -99,9 +99,9 @@ class ConversaoControlador(QObject):
 
     def _ao_receber_arquivo(self, caminho_texto: str) -> None:
         """Valida o arquivo selecionado ou solto e inicia a conversão se livre."""
-        if self._estado == EstadoConversao.CONVERTENDO:
+        if self._thread is not None:
             return
-        if self._janela.esta_botao_nvenc_visivel():
+        if not self._janela.entrada_disponivel():
             self._janela.exibir_status(STATUS_NVENC_PENDENTE)
             return
         caminho = Path(caminho_texto)
@@ -119,7 +119,7 @@ class ConversaoControlador(QObject):
             return
         if percentual > self._percentual_atual:
             self._percentual_atual = percentual
-        inteiro = int(round(self._percentual_atual))
+        inteiro = min(99, int(self._percentual_atual))
         texto = formatar_percentual(self._percentual_atual)
         self._janela.atualizar_progresso(inteiro, texto)
         self._atualizar_tempos_na_janela()
@@ -134,8 +134,8 @@ class ConversaoControlador(QObject):
         self._timer_decorrido.stop()
         self._estado = EstadoConversao.CONCLUIDA
         REGISTRADOR.info("Conversão concluída com sucesso: %s", caminho_destino)
+        self._janela.definir_caminho_resultado(caminho_destino)
         self._janela.exibir_popup_conclusao()
-        self._restaurar_estado_inicial()
 
     def _ao_falhar(self, mensagem_erro: str) -> None:
         """Exibe o popup de erro crítico (se não cancelado na saída) e reinicia a janela."""
@@ -143,18 +143,16 @@ class ConversaoControlador(QObject):
         self._estado = EstadoConversao.FALHOU
         if not self._cancelado_pelo_usuario:
             self._janela.exibir_popup_erro(mensagem_erro)
-            self._restaurar_estado_inicial()
 
     def _ao_finalizar_trabalhador(self) -> None:
         """Encerra a QThread e agenda a liberação de memória dos objetos Qt."""
-        if self._thread is not None:
-            self._thread.quit()
-            self._thread.wait(2000)
-            self._thread.deleteLater()
-            self._thread = None
-        if self._trabalhador is not None:
-            self._trabalhador.deleteLater()
-            self._trabalhador = None
+        self._thread = None
+        self._trabalhador = None
+        if self._cancelado_pelo_usuario:
+            self._janela.exibir_estado_inicial()
+            self._janela.close()
+        else:
+            self._restaurar_estado_inicial()
 
     # --- Métodos Auxiliares Privados ---
 
@@ -166,10 +164,7 @@ class ConversaoControlador(QObject):
         self._instante_inicio = time.monotonic()
         nome_curto = truncar_texto_meio(caminho.name)
         self._janela.exibir_inicio_conversao(nome_curto, str(caminho))
-        informacoes = self._ler_informacoes(caminho)
-        tamanho_txt = formatar_tamanho(informacoes.tamanho_bytes)
-        duracao_txt = formatar_duracao(informacoes.duracao_segundos)
-        self._janela.exibir_metadados_midia(tamanho_txt, duracao_txt)
+        self._janela.exibir_status("Preparando…")
         self._janela.atualizar_tempos("00:00:00", TEXTO_CALCULANDO)
         self._timer_decorrido.start()
 
@@ -177,13 +172,18 @@ class ConversaoControlador(QObject):
         """Cria a QThread e o trabalhador, conecta sinais em fila e inicia a thread."""
         thread = QThread(self)
         trabalhador = ConversaoTrabalhador(self._converter, caminho)
+        trabalhador.ler_informacoes = self._ler_informacoes
+        trabalhador.metadados.connect(self._ao_receber_metadados)
         trabalhador.moveToThread(thread)
         fila = Qt.ConnectionType.QueuedConnection
         thread.started.connect(trabalhador.executar)
         trabalhador.progresso.connect(self._ao_progredir, fila)
         trabalhador.concluida.connect(self._ao_concluir, fila)
         trabalhador.falhou.connect(self._ao_falhar, fila)
-        trabalhador.finalizado.connect(self._ao_finalizar_trabalhador, fila)
+        trabalhador.finalizado.connect(thread.quit, Qt.ConnectionType.DirectConnection)
+        trabalhador.finalizado.connect(trabalhador.deleteLater)
+        thread.finished.connect(self._ao_finalizar_trabalhador)
+        thread.finished.connect(thread.deleteLater)
         self._thread = thread
         self._trabalhador = trabalhador
         thread.start()
@@ -206,5 +206,13 @@ class ConversaoControlador(QObject):
         self._estado = EstadoConversao.AGUARDANDO
         self._percentual_atual = 0.0
         self._janela.exibir_estado_inicial()
-        if self._janela.esta_botao_nvenc_visivel():
+        if not self._janela.entrada_disponivel():
             self._janela.exibir_status(STATUS_NVENC_PENDENTE)
+
+    def _ao_receber_metadados(self, informacoes) -> None:
+        """Apresenta dados coletados pelo trabalhador sem I/O na interface."""
+        self._janela.exibir_status("Convertendo…")
+        self._janela.exibir_metadados_midia(
+            formatar_tamanho(informacoes.tamanho_bytes),
+            formatar_duracao(informacoes.duracao_segundos),
+        )

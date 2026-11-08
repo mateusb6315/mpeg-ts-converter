@@ -39,14 +39,16 @@ No PowerShell, na raiz do repositório:
 ```powershell
 py -3.13 -m venv .venv
 .\.venv\Scripts\Activate.ps1
-python -m pip install -r requirements.txt
+python -m pip install -r requirements-dev.txt
 python main.py
 ```
 
-`requirements.txt` instala PyQt6 (`>=6.5.0`) e pytest (`>=8.0.0`). O arquivo `pyproject.toml` declara Python `>=3.13` e PyQt6 `>=6.12.0,<7`; `poetry.lock` fixa as versões resolvidas para o fluxo com Poetry. Se você optar por esse fluxo, instale o Poetry separadamente e execute:
+`requirements.txt` fixa as bibliotecas de execução. `requirements-dev.txt` acrescenta
+pytest; `requirements-build.txt` acrescenta PyInstaller e seus hooks. O pyproject e o
+lockfile mantêm grupos equivalentes para Poetry:
 
 ```powershell
-poetry install --no-root
+poetry install --with dev,build --no-root
 poetry run python main.py
 ```
 
@@ -58,9 +60,9 @@ O uso de `--no-root` executa a aplicação diretamente a partir do repositório,
 2. Escolha um arquivo local com extensão `.ts` pelo clique na área à esquerda ou arraste **exatamente um** arquivo para a janela. Outros formatos, múltiplos arquivos e caminhos inexistentes são recusados. A extensão é verificada sem diferenciar maiúsculas e minúsculas; o conteúdo do vídeo não é analisado para confirmar TFF/60i.
 3. A janela mostra nome, tamanho, duração quando conhecida, status, tempo decorrido e tempo restante estimado. O nome longo aparece abreviado; passe o cursor sobre ele para ver o caminho completo. Durante a conversão, não é possível iniciar outro arquivo.
 4. Aguarde o aviso de conclusão. Após fechar o aviso, a janela volta a aceitar outro `.ts`. Em caso de falha, ela mostra uma mensagem; consulte os logs descritos abaixo para obter mais detalhes.
-5. Para cancelar uma conversão, feche a janela e confirme. O codificador recebe a solicitação de interrupção. Um arquivo `.mkv` incompleto pode permanecer na pasta; confira-o antes de usá-lo ou iniciar uma nova tentativa.
+5. Para cancelar uma conversão, feche a janela e confirme. O codificador recebe a solicitação de interrupção. Um arquivo `.mkv` incompleto pode permanecer em uma subpasta `.conversao-*`; confira-o antes de usá-lo ou iniciar uma nova tentativa.
 
-O resultado é salvo **na mesma pasta da entrada** como `<nome-original>_60fps_bwdif.mkv`. Exemplo: `programa.ts` gera `programa_60fps_bwdif.mkv`. Não há seleção de pasta de saída nem fila de arquivos. Uma nova conversão da mesma entrada usa o mesmo caminho de destino; preserve ou renomeie o resultado anterior antes de repetir a operação.
+O resultado é salvo **na mesma pasta da entrada** como `<nome-original>_60fps_bwdif.mkv`. Exemplo: `programa.ts` gera `programa_60fps_bwdif.mkv`. Não há seleção de pasta de saída nem fila de arquivos. Uma nova conversão recusa saída existente. Preserve ou renomeie o resultado anterior antes de repetir a operação.
 
 ## O que acontece durante a conversão
 
@@ -80,7 +82,7 @@ O progresso depende da saída do NVEncC e, quando disponível, da duração obti
 
 O log da codificação registra o comando, o código de saída e mensagens do NVEncC. Ele é gravado quando o codificador retorna, inclusive com código de erro; um cancelamento ou uma falha antes dessa etapa pode impedir a sua criação. Se a pasta de origem não permitir escrita, o próprio log também pode faltar.
 
-Se o programa disser que o NVEncC não foi encontrado, confira o caminho selecionado, a variável `nvenc64` e a extração completa do pacote. Se a conversão falhar, verifique a versão do NVEncC, o driver, a compatibilidade da GPU, o espaço em disco e as mensagens dos logs. Se a duração aparecer indisponível, verifique `ffprobe -version` em um novo PowerShell e confirme que a pasta de `ffprobe.exe` está no `PATH`. O título interno da janela e alguns caminhos de log ainda usam “Projeto Broadcast”; isso não afeta os nomes dos arquivos de saída.
+Se o programa disser que o NVEncC não foi encontrado, confira o caminho selecionado, a variável `nvenc64` e a extração completa do pacote. Se a conversão falhar, verifique a versão do NVEncC, o driver, a compatibilidade da GPU, o espaço em disco e as mensagens dos logs. Se a duração aparecer indisponível, verifique `ffprobe -version` em um novo PowerShell e confirme que a pasta de `ffprobe.exe` está no `PATH`. Alguns caminhos de log ainda usam “Projeto Broadcast”; isso não afeta os nomes dos arquivos de saída.
 
 ## Estrutura do projeto
 
@@ -101,24 +103,17 @@ Se o programa disser que o NVEncC não foi encontrado, confira o caminho selecio
 
 A interface e os subprocessos ficam separados: a janela emite eventos, os controladores coordenam o fluxo e os serviços executam as operações externas. Essa divisão permite manter a interface responsiva durante a conversão.
 
-## Compilar e publicar uma versão
+## Compilar e preparar uma versão
 
-Para gerar uma distribuição Windows, instale as dependências de build e execute o script na raiz do projeto:
+Instale `requirements-build.txt`. Execute `python scripts/compilar.py` para produção
+ou `python scripts/compilar_beta.py` para beta. Ambos pedem a versão manualmente.
+Produção exige X.Y.Z; beta aceita nome livre válido no Windows, com convenção
+recomendada `0.0.3-beta1`. Para CI use `--versao` explicitamente.
 
-```powershell
-python -m pip install -r requirements-build.txt
-python scripts/compilar.py
-```
-
-`requirements-build.txt` inclui as dependências de execução e PyInstaller `>=6.22,<7`. O script cria a próxima pasta `prototypes/beta 0.N/` com `p_broadcast.exe`, `_internal/` e `build.json`. A numeração considera as pastas e o arquivo `prototypes/historico.json`; versões anteriores não são sobrescritas. O histórico registra a data e as versões de Python e PyInstaller. Se uma compilação for interrompida após a criação da pasta, o script tenta recuperar o registro a partir de `build.json` na próxima execução. Um histórico inválido precisa ser corrigido antes de prosseguir. O arquivo `.compilacao.lock` pode permanecer após o término sem indicar bloqueio ativo.
-
-Para publicar pelo script de release, tenha o [GitHub CLI (`gh`)](https://cli.github.com/) instalado e autenticado, acesso ao repositório remoto e um prototype local com `.exe`:
-
-```powershell
-python scripts/release.py
-```
-
-Esse script escolhe **a pasta `beta 0.N` local com o maior número**, compacta seu conteúdo e cria a próxima tag de release ainda livre no GitHub no formato **`beta-0.N`**. A numeração da tag é calculada pelas tags e releases remotas; por isso, confira se ela corresponde à versão da pasta antes de executar o script quando houver builds ou tags feitos fora desse fluxo. Uma release publicada disponibiliza o ZIP na página de releases. O script de compilação, por si só, produz apenas a pasta local.
+Produção fica em `dist/producao/<versao>`; beta em `prototypes/beta/<versao>`.
+Resultados existentes e versões registradas não são sobrescritos. Nenhum compilador
+publica no GitHub. Consulte [distribuição](docs/distribuicao.md) para manifesto,
+verificação e preparação explícita de rascunho de release.
 
 ## Desenvolvimento e verificações
 

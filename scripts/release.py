@@ -1,125 +1,98 @@
-"""Publica no GitHub o prototype mais recente em uma nova release beta."""
-
+"""Verifica artefato explícito; publicação remota exige --publicar."""
+import argparse
 import json
-import re
+from pathlib import Path
 import subprocess
+import sys
 import tempfile
 import zipfile
-from pathlib import Path
 
-RAIZ = Path(__file__).resolve().parent.parent
-PADRAO = re.compile(r"beta[ -]0\.([1-9][0-9]*)", re.IGNORECASE)
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from scripts.distribuicao.manifesto import hash_arquivo
+
+RAIZ = Path(__file__).resolve().parents[1]
 
 
 def comando(*args: str) -> str:
-    """Executa o GitHub CLI e informa a causa de falhas."""
-    resultado = subprocess.run(
-        args,
-        cwd=RAIZ,
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        timeout=120,
-    )
-    if resultado.returncode:
-        raise RuntimeError(resultado.stderr.strip() or "Comando falhou.")
-    return resultado.stdout
+    """Executa CLI com prazo e falha explícita."""
+    return subprocess.check_output(args, cwd=RAIZ, text=True, encoding="utf-8", timeout=120)
 
 
-def releases() -> list[dict]:
-    """Lista todas as releases, incluindo pré-releases e rascunhos."""
-    saida = comando(
-        "gh",
-        "api",
-        "--paginate",
-        "--slurp",
-        "repos/{owner}/{repo}/releases?per_page=100",
-    )
-    return [item for pagina in json.loads(saida) for item in pagina]
-
-
-def preparar() -> tuple[str, Path]:
-    """Seleciona uma versão livre e o prototype com maior número."""
-    versoes = [
-        int(m.group(1))
-        for item in releases()
-        if (m := PADRAO.fullmatch(item["tag_name"]))
-    ]
-    # Tags podem existir sem uma release associada.
-    tags = comando("git", "ls-remote", "--tags", "origin")
-    for linha in tags.splitlines():
-        nome = linha.split("refs/tags/", 1)[-1].removesuffix("^{}")
-        if achado := PADRAO.fullmatch(nome):
-            versoes.append(int(achado.group(1)))
-    pastas = [
-        (int(m.group(1)), p)
-        for p in (RAIZ / "prototypes").iterdir()
-        if p.is_dir() and (m := PADRAO.fullmatch(p.name))
-    ]
-    if not pastas:
-        raise RuntimeError("Nenhum prototype beta encontrado.")
-    pasta = max(pastas, key=lambda item: item[0])[1]
-    if not list(pasta.glob("*.exe")):
-        raise RuntimeError(f"O prototype {pasta.name} não contém executável.")
-    return f"beta-0.{max(versoes, default=0) + 1}", pasta
+def verificar(pasta: Path) -> dict:
+    """Confere esquema, caminhos, hashes, tamanhos e recursos obrigatórios."""
+    dados = json.loads((pasta / "build.json").read_text(encoding="utf-8"))
+    if not isinstance(dados, dict):
+        raise ValueError("Manifesto deve ser objeto JSON.")
+    if dados.get("esquema") != 1 or dados.get("versao") != pasta.name:
+        raise ValueError("Manifesto incompatível com o artefato.")
+    arquivos = dados.get("arquivos", {})
+    if not isinstance(arquivos, dict):
+        raise ValueError("Inventário deve ser objeto JSON.")
+    if not {"p_broadcast.exe", "LICENSE", "README.md"} <= arquivos.keys():
+        raise ValueError("Recursos obrigatórios ausentes do manifesto.")
+    for nome, item in arquivos.items():
+        arquivo = (pasta / nome).resolve()
+        if not arquivo.is_relative_to(pasta.resolve()) or not arquivo.is_file():
+            raise ValueError(f"Caminho inválido: {nome}")
+        if arquivo.stat().st_size != item["bytes"] or hash_arquivo(arquivo) != item["sha256"]:
+            raise ValueError(f"Integridade divergente: {nome}")
+    presentes = {p.relative_to(pasta).as_posix() for p in pasta.rglob("*") if p.is_file()}
+    if presentes != set(arquivos) | {"build.json"}:
+        raise ValueError("Pacote contém arquivos fora do manifesto.")
+    return dados
 
 
 def compactar(pasta: Path, arquivo: Path) -> None:
-    """Compacta o conteúdo completo do prototype."""
-    with zipfile.ZipFile(arquivo, "w", zipfile.ZIP_DEFLATED) as zipado:
-        for item in pasta.rglob("*"):
+    """Cria ZIP exclusivo com conteúdo verificado."""
+    verificar(pasta)
+    with zipfile.ZipFile(arquivo, "x", zipfile.ZIP_DEFLATED) as zipado:
+        for item in sorted(pasta.rglob("*")):
             if item.is_file():
                 zipado.write(item, item.relative_to(pasta))
 
 
-def publicar(tag: str, arquivo: Path) -> None:
-    """Cria ou retoma a mesma release após falha parcial de publicação."""
-    existentes = [r for r in releases() if r["tag_name"] == tag]
-    if not existentes:
-        comando(
-            "gh",
-            "release",
-            "create",
-            tag,
-            str(arquivo),
-            "--title",
-            tag,
-            "--notes",
-            "Distribuição beta do MPEG-TS Converter.",
-        )
-    elif not any(a["name"] == arquivo.name for a in existentes[0]["assets"]):
-        comando("gh", "release", "upload", tag, str(arquivo))
-    dados = json.loads(
-        comando("gh", "release", "view", tag, "--json", "tagName,isDraft,assets,url")
-    )
-    if dados["isDraft"] or not any(a["name"] == arquivo.name for a in dados["assets"]):
-        raise RuntimeError("Release ou arquivo não confirmado no GitHub.")
-    print(f"[release] Publicada: {dados['url']}", flush=True)
+def publicar(pasta: Path, notas: Path) -> None:
+    """Prepara rascunho vinculado ao commit, recusando colisões remotas."""
+    dados = verificar(pasta)
+    if dados.get("git_sujo") or not dados.get("commit"):
+        raise ValueError("Publicação exige artefato de commit limpo identificado.")
+    tag = dados["versao"]
+    comando("git", "check-ref-format", "refs/tags/" + tag)
+    if comando("git", "ls-remote", "--tags", "origin", "refs/tags/" + tag).strip():
+        raise ValueError("Tag já existe; conferir a release antes de qualquer retomada.")
+    with tempfile.TemporaryDirectory() as temporario:
+        arquivo = Path(temporario) / f"mpeg-ts-converter_{tag}.zip"
+        compactar(pasta, arquivo)
+        checksum = arquivo.with_suffix(".zip.sha256")
+        checksum.write_text(hash_arquivo(arquivo) + "  " + arquivo.name + "\n")
+        args = ["gh", "release", "create", tag, str(arquivo), str(checksum),
+                "--target", dados["commit"], "--title", tag, "--draft",
+                "--notes-file", str(notas.resolve())]
+        if dados["canal"] == "beta":
+            args.append("--prerelease")
+        comando(*args)
 
 
 def principal() -> int:
-    """Interrompe sem conexão e tenta publicar no máximo duas vezes."""
+    """Verifica localmente por padrão; nunca escolhe versão ou pasta implicitamente."""
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--artefato", type=Path, required=True)
+    parser.add_argument("--publicar", action="store_true")
+    parser.add_argument("--notas", type=Path)
+    args = parser.parse_args()
     try:
-        print("[release] Verificando conexão e acesso ao repositório...", flush=True)
-        comando("gh", "api", "repos/{owner}/{repo}")
-        tag, pasta = preparar()
-        print(f"[release] {tag}; prototype: {pasta.name}", flush=True)
-        with tempfile.TemporaryDirectory() as temporario:
-            arquivo = Path(temporario) / f"mpeg-ts-converter_{tag}.zip"
-            compactar(pasta, arquivo)
-            for tentativa in range(1, 3):
-                try:
-                    publicar(tag, arquivo)
-                    return 0
-                except (OSError, RuntimeError, subprocess.TimeoutExpired) as erro:
-                    print(f"[release] Tentativa {tentativa} falhou: {erro}", flush=True)
-        return 1
-    except (OSError, RuntimeError, ValueError, subprocess.TimeoutExpired) as erro:
-        print(f"[release] ERRO: {erro}", flush=True)
+        dados = verificar(args.artefato)
+        print(f"Artefato verificado: {dados['versao']} ({dados['commit']})")
+        if args.publicar:
+            if not args.notas or not args.notas.is_file():
+                raise ValueError("Publicação exige --notas apontando para um arquivo.")
+            publicar(args.artefato, args.notas)
+        return 0
+    except (OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError) as erro:
+        print(f"[release] ERRO: {erro}")
         return 1
     except KeyboardInterrupt:
-        print("[release] Operação interrompida.", flush=True)
         return 130
 
 

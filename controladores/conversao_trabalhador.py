@@ -23,6 +23,7 @@ FuncaoConversao = Callable[
 class ConversaoTrabalhador(QObject):
     """Executa o serviço de conversão em uma QThread e emite sinais Qt seguros."""
 
+    metadados = pyqtSignal(object)
     progresso = pyqtSignal(float)
     concluida = pyqtSignal(str)
     falhou = pyqtSignal(str)
@@ -40,6 +41,7 @@ class ConversaoTrabalhador(QObject):
         self._origem = origem
         self._evento_cancelamento = threading.Event()
         self._ultimo_envio = 0.0
+        self.ler_informacoes = None
 
     def solicitar_cancelamento(self) -> None:
         """Sinaliza ao serviço em execução que o processo deve ser interrompido."""
@@ -48,6 +50,10 @@ class ConversaoTrabalhador(QObject):
     def executar(self) -> None:
         """Dispara a conversão e garante emissão de resultado e `finalizado`."""
         try:
+            if self.ler_informacoes is not None:
+                self.metadados.emit(self.ler_informacoes(self._origem))
+            if self._evento_cancelamento.is_set():
+                raise ErroConversao("Conversão cancelada pelo usuário.")
             destino = self._converter(
                 self._origem,
                 self._emitir_progresso_limitado,
