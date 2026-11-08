@@ -4,7 +4,7 @@ import importlib.util
 import os
 import subprocess
 from scripts.distribuicao.compilador import RAIZ, compilar, status
-from scripts.distribuicao.versoes import validar_nome, validar_producao
+from scripts.distribuicao.versoes import validar_nome
 
 
 def principal(canal: str) -> int:
@@ -14,13 +14,12 @@ def principal(canal: str) -> int:
     parser.add_argument("--console", action="store_true", help="Diagnóstico com console")
     args = parser.parse_args()
     try:
-        exemplo = "0.0.3-beta1" if canal == "beta" else "0.0.3"
         versao = args.versao
         if versao is None:
             if os.environ.get("CI"):
                 raise ValueError("No CI informe --versao explicitamente.")
-            versao = input(f"Versão (recomendado {exemplo}): ")
-        (validar_nome if canal == "beta" else validar_producao)(versao)
+            versao = input("Versão: ")
+        validar_nome(versao)
         if os.name != "nt":
             raise RuntimeError("Compile o executável Windows no Windows.")
         for nome in ("PyInstaller", "PyQt6"):

@@ -107,12 +107,12 @@ A interface e os subprocessos ficam separados: a janela emite eventos, os contro
 
 Instale `requirements-build.txt`. Execute `python scripts/compilar.py` para produção
 ou `python scripts/compilar_beta.py` para beta. Ambos pedem a versão manualmente.
-Produção exige X.Y.Z; beta aceita nome livre válido no Windows, com convenção
-recomendada `0.0.3-beta1`. Para CI use `--versao` explicitamente.
+Ambos aceitam versão livre válida como nome de pasta no Windows. Para CI use
+`--versao` explicitamente.
 
 Produção fica em `dist/producao/mpeg-ts-converter <versao>`; beta em
 `prototypes/beta/mpeg-ts-converter <versao>`.
-Resultados existentes e versões registradas não são sobrescritos. Nenhum compilador
+Se a pasta já existir, uma nova pasta numerada é criada. Nenhum compilador
 publica no GitHub. Consulte [distribuição](docs/distribuicao.md) para manifesto,
 verificação e preparação explícita de rascunho de release.
 

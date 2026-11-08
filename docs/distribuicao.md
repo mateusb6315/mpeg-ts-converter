@@ -7,13 +7,11 @@ python scripts/compilar.py
 python scripts/compilar_beta.py
 ```
 
-Ambos solicitam a versão por input. Produção exige X.Y.Z; beta aceita nome livre
-válido de pasta Windows. Convenção recomendada: `0.0.3-beta1`.
+Ambos solicitam a versão por input e aceitam nome livre válido de pasta Windows.
 Também aceitam `--versao`; no CI esse argumento é obrigatório.
 Produção fica em `dist/producao/mpeg-ts-converter <versao>`; beta em
 `prototypes/beta/mpeg-ts-converter <versao>`.
-Históricos são separados; uma versão registrada nunca é sobrescrita/reutilizada.
-O histórico antigo na raiz de prototypes permanece intacto.
+Versões podem ser reutilizadas; se a pasta já existir, uma nova pasta numerada é criada.
 
 Cada pacote contém executável, runtime, README, licença, licenças coletadas das
 bibliotecas instaladas e build.json com commit, ambiente e hashes. A coleta não

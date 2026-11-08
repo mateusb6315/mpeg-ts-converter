@@ -3,7 +3,7 @@ from pathlib import Path
 import threading
 from unittest.mock import patch
 import pytest
-from scripts.distribuicao.versoes import validar_nome, validar_producao
+from scripts.distribuicao.versoes import validar_nome
 from servicos import conversao_servico as motor
 from servicos.pipeline_conversao import executar_conversao
 from modelos.conversao import validar_fluxos_audio
@@ -18,12 +18,6 @@ def test_beta_aceita_formato_livre(nome):
 def test_nome_recusa_caminhos_e_reservados(nome):
     with pytest.raises(ValueError):
         validar_nome(nome)
-
-
-def test_producao_exige_tres_numeros():
-    assert validar_producao("0.0.3") == "0.0.3"
-    with pytest.raises(ValueError):
-        validar_producao("0.0.3-beta1")
 
 
 def test_cancelamento_previo_nao_inicia_processo(tmp_path):

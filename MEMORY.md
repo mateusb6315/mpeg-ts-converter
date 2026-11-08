@@ -28,7 +28,7 @@ ffprobe no PATH é opcional: obtém duração e fluxos e permite comparar faixas
 grupos dev/build. Ambiente suportado de desenvolvimento: Python 3.13.
 
 Compiladores de produção/beta solicitam versão manual ou recebem --versao para CI.
-O beta aceita nome livre válido Windows; produção exige X.Y.Z. Distribuição e
+Ambos os compiladores aceitam versão livre válida para pasta no Windows. Distribuição e
 verificação estão descritas em docs/distribuicao.md. Os artefatos beta 0.2 existentes
 permanecem como referência, sem associação garantida com o HEAD.
 
@@ -42,7 +42,7 @@ A suíte é executada com `python -m pytest -v`; a auditoria com `python .agents
 ## Implementação local da beta 0.3
 
 Compiladores separados com input manual e --versao para CI. Beta aceita nomes livres
-Windows; recomendação 0.0.3-beta1. Produção exige X.Y.Z. Destinos e históricos isolados.
+Windows. Destinos isolados; pastas existentes geram uma nova pasta numerada.
 Release verifica manifesto explícito; publicação cria rascunho, exige origem limpa e
 recusa tag existente. Consultar docs/distribuicao.md; nenhuma publicação foi executada.
 Conversão preserva fluxos de vídeo na validação A/V, usa parcial isolado e recusa

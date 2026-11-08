@@ -12,11 +12,3 @@ def validar_nome(valor: str) -> str:
                      *[f"LPT{i}" for i in range(10)]}:
         raise ValueError("Nome reservado no Windows.")
     return valor
-
-
-def validar_producao(valor: str) -> str:
-    """Exige três componentes numéricos em produção."""
-    validar_nome(valor)
-    if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", valor):
-        raise ValueError("Produção exige X.Y.Z, por exemplo 0.0.3.")
-    return valor

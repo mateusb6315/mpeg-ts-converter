@@ -1,6 +1,7 @@
 """Verifica artefato explícito; publicação remota exige --publicar."""
 import argparse
 import json
+import re
 from pathlib import Path
 import subprocess
 import sys
@@ -27,7 +28,7 @@ def verificar(pasta: Path) -> dict:
         raise ValueError("Manifesto deve ser objeto JSON.")
     versao = dados.get("versao")
     nome_esperado = f"{NOME} {versao}" if isinstance(versao, str) else ""
-    if dados.get("esquema") != 1 or pasta.name != nome_esperado:
+    if dados.get("esquema") != 1 or not re.fullmatch(re.escape(nome_esperado) + r"(?: \((?:[2-9]|[1-9][0-9]+)\))?", pasta.name):
         raise ValueError("Manifesto incompatível com o artefato.")
     arquivos = dados.get("arquivos", {})
     if not isinstance(arquivos, dict):
