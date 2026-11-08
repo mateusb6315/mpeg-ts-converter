@@ -12,13 +12,30 @@ RAIZ = Path(__file__).resolve().parents[2]
 from scripts.distribuicao.ambiente import ambiente_compilacao
 
 NOME = "mpeg-ts-converter"
+ICONE = RAIZ / "modelos" / "logo" / "icon.png"
+
 def status(mensagem: str) -> None:
     """Escreve o progresso imediatamente no terminal."""
     print(f"[compilação] {mensagem}", flush=True)
 
 
+def _converter_icone(temporario: Path) -> Path:
+    """Converte o ícone PNG para ICO dentro da pasta temporária do build."""
+    from PIL import Image
+
+    if not ICONE.is_file():
+        raise FileNotFoundError(f"Ícone do executável não encontrado: {ICONE}")
+    destino = temporario / "mpeg-ts-converter.ico"
+    with Image.open(ICONE) as imagem:
+        imagem.convert("RGBA").save(destino, format="ICO",
+                                     sizes=[(16, 16), (32, 32), (48, 48),
+                                            (64, 64), (128, 128), (256, 256)])
+    return destino
+
+
 def _montar_comando_pyinstaller(temporario: Path, console: bool = False) -> list[str]:
     """Monta a linha de comando do PyInstaller no diretório temporário informado."""
+    icone = _converter_icone(temporario)
     return [
         sys.executable,
         "-u",
@@ -31,6 +48,8 @@ def _montar_comando_pyinstaller(temporario: Path, console: bool = False) -> list
         "--noupx",
         "--name",
         NOME,
+        "--icon",
+        str(icone),
         "--distpath",
         str(temporario / "dist"),
         "--workpath",
