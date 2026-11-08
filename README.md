@@ -10,7 +10,7 @@ A [página de releases](https://github.com/mateusb6315/mpeg-ts-converter/release
 
 1. Baixe o arquivo ZIP da versão desejada e **extraia todo o conteúdo** para uma pasta com permissão de escrita. Não execute o programa diretamente de dentro do ZIP.
 2. Instale ou extraia o NVEncC conforme a seção seguinte. Tenha uma GPU e um driver NVIDIA compatíveis.
-3. Abra `p_broadcast.exe` na pasta extraída, mantendo a subpasta `_internal` ao lado do executável. O nome do executável ainda reflete o nome interno anterior do projeto.
+3. Abra `mpeg-ts-converter.exe` na pasta extraída, mantendo a subpasta `_internal` ao lado do executável.
 4. Se o programa não localizar o NVEncC, selecione `NVEncC64.exe` ou `nvenc64.exe` quando solicitado.
 5. Clique na área **“Selecione ou arraste um arquivo .ts aqui”** ou solte nela um único arquivo `.ts`. A conversão começa imediatamente.
 
@@ -110,7 +110,8 @@ ou `python scripts/compilar_beta.py` para beta. Ambos pedem a versão manualment
 Produção exige X.Y.Z; beta aceita nome livre válido no Windows, com convenção
 recomendada `0.0.3-beta1`. Para CI use `--versao` explicitamente.
 
-Produção fica em `dist/producao/<versao>`; beta em `prototypes/beta/<versao>`.
+Produção fica em `dist/producao/mpeg-ts-converter <versao>`; beta em
+`prototypes/beta/mpeg-ts-converter <versao>`.
 Resultados existentes e versões registradas não são sobrescritos. Nenhum compilador
 publica no GitHub. Consulte [distribuição](docs/distribuicao.md) para manifesto,
 verificação e preparação explícita de rascunho de release.

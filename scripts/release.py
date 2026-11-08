@@ -10,6 +10,7 @@ import zipfile
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from scripts.distribuicao.manifesto import hash_arquivo
+from scripts.distribuicao.compilador import NOME
 
 RAIZ = Path(__file__).resolve().parents[1]
 
@@ -24,12 +25,15 @@ def verificar(pasta: Path) -> dict:
     dados = json.loads((pasta / "build.json").read_text(encoding="utf-8"))
     if not isinstance(dados, dict):
         raise ValueError("Manifesto deve ser objeto JSON.")
-    if dados.get("esquema") != 1 or dados.get("versao") != pasta.name:
+    versao = dados.get("versao")
+    nome_esperado = f"{NOME} {versao}" if isinstance(versao, str) else ""
+    if dados.get("esquema") != 1 or pasta.name != nome_esperado:
         raise ValueError("Manifesto incompatível com o artefato.")
     arquivos = dados.get("arquivos", {})
     if not isinstance(arquivos, dict):
         raise ValueError("Inventário deve ser objeto JSON.")
-    if not {"p_broadcast.exe", "LICENSE", "README.md"} <= arquivos.keys():
+    obrigatorios = {f"{NOME}.exe", "LICENSE", "README.md"}
+    if not obrigatorios <= arquivos.keys():
         raise ValueError("Recursos obrigatórios ausentes do manifesto.")
     for nome, item in arquivos.items():
         arquivo = (pasta / nome).resolve()

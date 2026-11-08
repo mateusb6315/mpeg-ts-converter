@@ -23,7 +23,7 @@ jobs:
       - run: python -m pip install -r requirements-build.txt
       - run: python -m pytest -v
       - run: python scripts/compilar_beta.py --versao "$env:VERSAO_BETA"
-      - run: python scripts/release.py --artefato "prototypes/beta/$env:VERSAO_BETA"
+      - run: python scripts/release.py --artefato "prototypes/beta/mpeg-ts-converter $env:VERSAO_BETA"
       - uses: actions/upload-artifact@v4
         with:
           name: candidato-beta

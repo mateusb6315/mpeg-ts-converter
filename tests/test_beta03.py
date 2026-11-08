@@ -98,16 +98,18 @@ def test_release_detecta_adulteracao(tmp_path):
     from scripts.release import verificar
     from scripts.distribuicao.manifesto import hash_arquivo
     arquivos = {}
-    for nome in ("p_broadcast.exe", "LICENSE", "README.md"):
-        caminho = tmp_path / nome
+    pasta = tmp_path / "mpeg-ts-converter 0.0.3-beta"
+    pasta.mkdir()
+    for nome in ("mpeg-ts-converter.exe", "LICENSE", "README.md"):
+        caminho = pasta / nome
         caminho.write_bytes(b"original")
         arquivos[nome] = {"sha256": hash_arquivo(caminho), "bytes": 8}
-    (tmp_path / "build.json").write_text(json.dumps(
-        {"esquema": 1, "versao": tmp_path.name, "arquivos": arquivos}))
-    verificar(tmp_path)
-    (tmp_path / "p_broadcast.exe").write_bytes(b"alterado")
+    (pasta / "build.json").write_text(json.dumps(
+        {"esquema": 1, "versao": "0.0.3-beta", "arquivos": arquivos}))
+    verificar(pasta)
+    (pasta / "mpeg-ts-converter.exe").write_bytes(b"alterado")
     with pytest.raises(ValueError, match="Integridade"):
-        verificar(tmp_path)
+        verificar(pasta)
 
 
 def test_metadados_lentos_e_ciclo_qthread_nao_bloqueiam_gui(tmp_path):

@@ -10,7 +10,8 @@ python scripts/compilar_beta.py
 Ambos solicitam a versão por input. Produção exige X.Y.Z; beta aceita nome livre
 válido de pasta Windows. Convenção recomendada: `0.0.3-beta1`.
 Também aceitam `--versao`; no CI esse argumento é obrigatório.
-Produção fica em `dist/producao/<versao>`; beta em `prototypes/beta/<versao>`.
+Produção fica em `dist/producao/mpeg-ts-converter <versao>`; beta em
+`prototypes/beta/mpeg-ts-converter <versao>`.
 Históricos são separados; uma versão registrada nunca é sobrescrita/reutilizada.
 O histórico antigo na raiz de prototypes permanece intacto.
 
@@ -20,7 +21,7 @@ substitui uma revisão do inventário de licenças antes de distribuição públ
 O build local pode registrar Git sujo; publicação exige Git limpo no manifesto.
 
 ```powershell
-python scripts/release.py --artefato "prototypes/beta/0.0.3-beta1"
+python scripts/release.py --artefato "prototypes/beta/mpeg-ts-converter 0.0.3-beta"
 ```
 
 Esse comando verifica arquivos e hashes localmente. Publicação exige `--publicar`

@@ -16,7 +16,7 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parents[2]
 from scripts.distribuicao.ambiente import ambiente_compilacao
 
-NOME = "p_broadcast"
+NOME = "mpeg-ts-converter"
 PADRAO_VERSAO = re.compile(r"beta 0\.([1-9][0-9]*)", re.IGNORECASE)
 
 
@@ -93,24 +93,28 @@ def reconciliar_historico(diretorio: Path, historico: list[dict]) -> None:
     for pasta in diretorio.iterdir():
         if not pasta.is_dir() or pasta.name.startswith("."):
             continue
-        if pasta.name.lower() in conhecidas or not (pasta / f"{NOME}.exe").is_file():
+        executaveis_aceitos = (f"{NOME}.exe", "p_broadcast.exe")
+        if not any((pasta / nome).is_file() for nome in executaveis_aceitos):
             continue
         metadados = pasta / "build.json"
         if not metadados.is_file():
             continue
         try:
             item = json.loads(metadados.read_text(encoding="utf-8"))
-            if not isinstance(item, dict) or item.get("versao") != pasta.name:
+            if not isinstance(item, dict) or not isinstance(item.get("versao"), str):
+                raise ValueError
+            versao = item["versao"]
+            nomes_validos = {versao.casefold(), f"{NOME} {versao}".casefold()}
+            if pasta.name.casefold() not in nomes_validos:
                 raise ValueError
         except (ValueError, UnicodeError) as erro:
             raise ValueError(
                 f"Metadados inválidos em {metadados}; corrija-os."
             ) from erro
-        recuperados.append(item)
+        if versao.casefold() not in conhecidas:
+            recuperados.append(item)
     if recuperados:
-        historico.extend(
-            sorted(recuperados, key=lambda item: item["versao"])
-        )
+        historico.extend(sorted(recuperados, key=lambda item: item["versao"]))
         gravar_json(diretorio / "historico.json", historico)
         status(f"Histórico recuperado: {len(recuperados)} versão(ões).")
 
@@ -171,8 +175,12 @@ def _exibir_saida_falha(erro: subprocess.CalledProcessError) -> None:
         print(linha, flush=True)
 
 
-def compilar(diretorio: Path, executar=subprocess.run,
-             versao: str | None = None, console: bool = False) -> Path:
+def compilar(
+    diretorio: Path,
+    executar=subprocess.run,
+    versao: str | None = None,
+    console: bool = False,
+) -> Path:
     """Gera uma versão e registra apenas a distribuição publicada com sucesso."""
     diretorio.mkdir(parents=True, exist_ok=True)
     with bloqueio(diretorio):
@@ -181,21 +189,23 @@ def compilar(diretorio: Path, executar=subprocess.run,
         reconciliar_historico(diretorio, historico)
         versao = versao or f"beta 0.{proxima_versao(diretorio, historico)}"
         from scripts.distribuicao.versoes import validar_nome
+
         validar_nome(versao)
         if any(item["versao"].casefold() == versao.casefold() for item in historico):
             raise FileExistsError("Versão já registrada no histórico.")
-        destino = diretorio / versao
+        destino = diretorio / f"{NOME} {versao}"
         status(f"Próxima versão: {versao}.")
         with tempfile.TemporaryDirectory(prefix=".compilacao-", dir=diretorio) as temp:
             pasta = executar_pyinstaller(Path(temp), executar, console)
             item = {
                 "versao": versao,
                 "data": datetime.now().astimezone().isoformat(),
-                "caminho": versao,
+                "caminho": destino.name,
                 "python": sys.version.split()[0],
                 "pyinstaller": importlib.metadata.version("pyinstaller"),
             }
             from scripts.distribuicao.manifesto import preparar_pacote
+
             item.update(preparar_pacote(pasta, versao, diretorio.name))
             gravar_json(pasta / "build.json", item)
             status(f"Publicando {versao}...")
@@ -209,8 +219,6 @@ def compilar(diretorio: Path, executar=subprocess.run,
         gravar_json(diretorio / "historico.json", historico)
         status("Compilação concluída.")
         return destino
-
-
 
 
 def _publicar_pasta(pasta: Path, destino: Path) -> None:

@@ -22,7 +22,7 @@ def _compilador_falso(comando, **kwargs):
     from pathlib import Path
     pasta = Path(destino) / comando[comando.index("--name") + 1]
     pasta.mkdir(parents=True)
-    (pasta / "p_broadcast.exe").write_bytes(b"teste")
+    (pasta / "mpeg-ts-converter.exe").write_bytes(b"teste")
 
 
 def _historico(diretorio):
@@ -69,9 +69,10 @@ def test_compila_sequencialmente_e_emite_status(tmp_path, capsys):
     """Publicações consecutivas registram e anunciam cada versão."""
     compilar(tmp_path, executar=_compilador_falso)
     compilar(tmp_path, executar=_compilador_falso)
-    assert (tmp_path / "beta 0.1" / "p_broadcast.exe").is_file()
-    assert (tmp_path / "beta 0.2" / "p_broadcast.exe").is_file()
+    assert (tmp_path / "mpeg-ts-converter beta 0.1" / "mpeg-ts-converter.exe").is_file()
+    assert (tmp_path / "mpeg-ts-converter beta 0.2" / "mpeg-ts-converter.exe").is_file()
     assert [item["versao"] for item in _historico(tmp_path)] == ["beta 0.1", "beta 0.2"]
+    assert _historico(tmp_path)[0]["caminho"] == "mpeg-ts-converter beta 0.1"
     saida = capsys.readouterr().out
     assert "beta 0.1" in saida and "Fazendo a compilação..." in saida
     assert "concluída" in saida
@@ -81,7 +82,7 @@ def test_json_vazio_gera_primeira_versao(tmp_path):
     """Um historico.json vazio equivale a nenhuma versão registrada."""
     (tmp_path / "historico.json").write_text("", encoding="utf-8")
     compilar(tmp_path, executar=_compilador_falso)
-    assert (tmp_path / "beta 0.1" / "p_broadcast.exe").is_file()
+    assert (tmp_path / "mpeg-ts-converter beta 0.1" / "mpeg-ts-converter.exe").is_file()
     assert [item["versao"] for item in _historico(tmp_path)] == ["beta 0.1"]
 
 
@@ -95,7 +96,7 @@ def test_json_somente_espacos_gera_primeira_versao(tmp_path):
 def test_json_inexistente_gera_primeira_versao(tmp_path):
     """Sem historico.json, a primeira compilação é beta 0.1."""
     compilar(tmp_path, executar=_compilador_falso)
-    assert (tmp_path / "beta 0.1" / "p_broadcast.exe").is_file()
+    assert (tmp_path / "mpeg-ts-converter beta 0.1" / "mpeg-ts-converter.exe").is_file()
 
 
 def test_versao_removida_nao_e_reutilizada(tmp_path):
@@ -104,7 +105,7 @@ def test_versao_removida_nao_e_reutilizada(tmp_path):
         json.dumps([{"versao": "beta 0.12"}]), encoding="utf-8"
     )
     compilar(tmp_path, executar=_compilador_falso)
-    assert (tmp_path / "beta 0.13" / "p_broadcast.exe").is_file()
+    assert (tmp_path / "mpeg-ts-converter beta 0.13" / "mpeg-ts-converter.exe").is_file()
 
 
 def test_compilacao_falha_sem_publicar_nem_consumir_versao(tmp_path):
@@ -113,10 +114,10 @@ def test_compilacao_falha_sem_publicar_nem_consumir_versao(tmp_path):
         raise subprocess.CalledProcessError(1, comando)
     with pytest.raises(subprocess.CalledProcessError):
         compilar(tmp_path, executar=falhar)
-    assert not (tmp_path / "beta 0.1").exists()
+    assert not (tmp_path / "mpeg-ts-converter beta 0.1").exists()
     assert not (tmp_path / "historico.json").exists()
     compilar(tmp_path, executar=_compilador_falso)
-    assert (tmp_path / "beta 0.1").exists()
+    assert (tmp_path / "mpeg-ts-converter beta 0.1").exists()
 
 
 def test_historico_invalido_interrompe_sem_sobrescrever(tmp_path):
@@ -138,13 +139,14 @@ def test_recupera_publicacao_interrompida_antes_do_registro(tmp_path):
     )
     compilar(tmp_path, executar=_compilador_falso)
     assert [item["versao"] for item in _historico(tmp_path)] == ["beta 0.4", "beta 0.5"]
+    assert (tmp_path / "mpeg-ts-converter beta 0.5").is_dir()
 
 
 def test_executavel_ausente_nao_publica_versao(tmp_path):
     """Uma saída incompleta do PyInstaller não é publicada."""
     with pytest.raises(RuntimeError, match="executável"):
         compilar(tmp_path, executar=lambda *args, **kwargs: None)
-    assert not (tmp_path / "beta 0.1").exists()
+    assert not (tmp_path / "mpeg-ts-converter beta 0.1").exists()
 
 
 def test_bloqueio_recusa_outra_compilacao(tmp_path):
